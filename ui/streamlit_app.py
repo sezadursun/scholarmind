@@ -1,13 +1,12 @@
+import streamlit as st
+from scholarmind_ui_theme import apply_scholarmind_theme
+apply_scholarmind_theme()
+
 import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-import streamlit as st
 from openai import OpenAI
 import openai
-
-from scholarmind_ui_theme import apply_scholarmind_theme
-apply_scholarmind_theme()  # ✔ Tema uygulaması zaten burada
-
 from app.paper_search import search_papers
 from app.summarize import summarize_paper, summarize_fulltext
 from app.prompts import SYSTEM_MESSAGE, SUMMARY_PROMPT_TEMPLATE
