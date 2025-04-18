@@ -46,3 +46,22 @@ st.markdown("""
 # 🧠 ScholarMind başlık
 st.title("🧠 ScholarMind")
 st.caption("Bilge araştırma hafızanız. Arayın, özetleyin, hatırlayın.")
+
+def apply_scholarmind_theme():
+    st.set_page_config(
+        page_title="ScholarMind – 🧠 Akademik Hafıza Asistanı",
+        page_icon="🧠",
+        layout="wide"
+    )
+    st.markdown("""
+        <style>
+        body {
+            background-color: #FAF9F6;
+            font-family: 'Inter', sans-serif;
+        }
+        .block-container {
+            padding: 2rem 3rem;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
