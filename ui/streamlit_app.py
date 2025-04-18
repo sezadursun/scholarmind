@@ -5,7 +5,7 @@ import streamlit as st
 from openai import OpenAI
 import openai
 
-from ui.scholarmind_ui_theme import apply_scholarmind_theme
+from scholarmind_ui_theme import apply_scholarmind_theme
 apply_scholarmind_theme()  # ✔ Tema uygulaması zaten burada
 
 from app.paper_search import search_papers
