@@ -1,5 +1,5 @@
 # Manages history using ChromaDB
-# 🗃️ chroma.py – ChromaDB ile araştırma geçmişini kaydetme ve geri çağırma
+# 🧳️ chroma.py – ChromaDB ile araştırma geçmişini kaydetme ve geri çağırma
 
 import os
 
@@ -11,32 +11,35 @@ try:
     from chromadb.utils import embedding_functions
 except Exception as e:
     chroma_supported = False
+    chromadb = None
+    embedding_functions = None
 
+# Chroma istemcisi başlatılıyor (yalnızca destekleniyorsa)
+if chroma_supported:
+    chroma_client = chromadb.Client(Settings(
+        chroma_db_impl="duckdb+parquet",
+        persist_directory="chroma_storage"  # kalıcı saklama klasörü
+    ))
 
-# Chroma istemcisi başlatılıyor
-chroma_client = chromadb.Client(Settings(
-    chroma_db_impl="duckdb+parquet",
-    persist_directory="chroma_storage"  # kalıcı saklama klasörü
-))
+    openai_ef = embedding_functions.OpenAIEmbeddingFunction(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        model_name="text-embedding-ada-002"
+    )
 
-# Embedding fonksiyonu: OpenAI kullanılıyor
-openai_ef = embedding_functions.OpenAIEmbeddingFunction(
-    api_key=os.getenv("OPENAI_API_KEY"),
-    model_name="text-embedding-ada-002"
-)
-
-# Koleksiyon oluşturuluyor (veya varsa çağrılıyor)
-collection = chroma_client.get_or_create_collection(
-    name="research_history",
-    embedding_function=openai_ef
-)
+    collection = chroma_client.get_or_create_collection(
+        name="research_history",
+        embedding_function=openai_ef
+    )
+else:
+    chroma_client = None
+    collection = None
 
 def add_to_memory(id: str, content: str, metadata: dict = None):
     """
     Yeni bir içeriği hafızaya ekler.
     """
-    if not chroma_supported:
-        print("⛔ Chroma desteklenmiyor. Hafızaya ekleme yapılamaz.")
+    if not chroma_supported or collection is None:
+        print("⛘️ Chroma desteklenmiyor. Hafızaya ekleme yapılamaz.")
         return
 
     try:
@@ -48,13 +51,12 @@ def add_to_memory(id: str, content: str, metadata: dict = None):
     except Exception as e:
         print(f"❌ Chroma ekleme hatası: {e}")
 
-
 def search_memory(query: str, top_k=3):
     """
     Hafızadaki içerikler arasında semantik olarak en benzer olanları bulur.
     """
-    if not chroma_supported:
-        print("⛔ Chroma desteklenmiyor. Hafızadan arama yapılamaz.")
+    if not chroma_supported or collection is None:
+        print("⛘️ Chroma desteklenmiyor. Hafızadan arama yapılamaz.")
         return {"documents": [[]], "metadatas": [[]]}
 
     try:
@@ -63,5 +65,3 @@ def search_memory(query: str, top_k=3):
     except Exception as e:
         print(f"❌ Chroma sorgusu başarısız oldu: {e}")
         return {"documents": [[]], "metadatas": [[]]}
-
-
