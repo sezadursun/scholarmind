@@ -5,7 +5,7 @@ import streamlit as st
 from openai import OpenAI
 import openai
 
-from scholarmind_ui_theme import apply_scholarmind_theme
+from ui.scholarmind_ui_theme import apply_scholarmind_theme
 apply_scholarmind_theme()
 
 from app.paper_search import search_papers
@@ -20,7 +20,7 @@ from app.milvus_engine import add_to_milvus
 from PyPDF2 import PdfReader
 
 st.set_page_config(page_title="📚 Academic Research Assistant", layout="wide")
-
+apply_scholarmind_theme()
 
 
 # 🔐 OpenAI API Key giriş alanı
