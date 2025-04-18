@@ -2,9 +2,13 @@
 # 🗃️ chroma.py – ChromaDB ile araştırma geçmişini kaydetme ve geri çağırma
 
 import os
-import chromadb
-from chromadb.config import Settings
-from chromadb.utils import embedding_functions
+
+try:
+    import chromadb
+    from chromadb.config import Settings
+    from chromadb.utils import embedding_functions
+except ImportError:
+    chromadb = None
 
 # Chroma istemcisi başlatılıyor
 chroma_client = chromadb.Client(Settings(
