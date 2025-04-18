@@ -3,15 +3,21 @@ from openai import OpenAI
 import numpy as np
 import uuid
 
-# 🔌 Bağlantı kur (localhost:19530 varsayılı)
-connections.connect(alias="default", host="localhost", port="19530")
+# 🔌 Zilliz Cloud bağlantısı
+connections.connect(
+    alias="default",
+    uri="https://in03-3ebddd479cd8e47.serverless.gcp-us-west1.cloud.zilliz.com", 
+    user="db_3ebddd479cd8e47",
+    password="Os2*%t,c<3QOcpq6",
+    secure=True
+)
 
 # 📊 Koleksiyon bilgileri
 COLLECTION_NAME = "research_memory"
 DIMENSION = 1536  # text-embedding-ada-002
 EMBEDDING_MODEL = "text-embedding-ada-002"
 
-# 📄 Koleksiyon oluşturma (ilk çalıştırma için)
+# 📄 Koleksiyon oluşturma
 def create_collection():
     if COLLECTION_NAME in list_collections():
         return
@@ -24,13 +30,13 @@ def create_collection():
     schema = CollectionSchema(fields, description="Research memory by user")
     Collection(name=COLLECTION_NAME, schema=schema).create()
 
-# 🖉 Vektör embedding al
+# 🧠 Embedding oluştur
 def get_embedding(text: str, api_key: str) -> np.ndarray:
     client = OpenAI(api_key=api_key)
     response = client.embeddings.create(input=[text], model=EMBEDDING_MODEL)
     return np.array(response.data[0].embedding, dtype=np.float32)
 
-# 🔄 Belleğe veri ekle
+# 💾 Milvus'a veri ekle
 def add_to_milvus(user_id: str, title: str, text: str, api_key: str):
     create_collection()
     collection = Collection(name=COLLECTION_NAME)
@@ -40,7 +46,7 @@ def add_to_milvus(user_id: str, title: str, text: str, api_key: str):
     collection.insert(data)
     collection.flush()
 
-# 🔍 Benzer içerik ara
+# 🔍 Arama yap
 def search_milvus(query: str, user_id: str, api_key: str, top_k: int = 3):
     create_collection()
     collection = Collection(name=COLLECTION_NAME)
