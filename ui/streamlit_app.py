@@ -1,12 +1,15 @@
-import streamlit as st
-from scholarmind_ui_theme import apply_scholarmind_theme
-apply_scholarmind_theme()
+import streamlit as st  # 👈 Bu en başta olmalı
 
+from scholarmind_ui_theme import apply_scholarmind_theme
+apply_scholarmind_theme()  # Bu fonksiyonun içinde set_page_config varsa, hemen sonra çağrılır
+
+# Bundan sonra diğer tüm importlar gelebilir
 import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from openai import OpenAI
 import openai
+
 from app.paper_search import search_papers
 from app.summarize import summarize_paper, summarize_fulltext
 from app.prompts import SYSTEM_MESSAGE, SUMMARY_PROMPT_TEMPLATE
