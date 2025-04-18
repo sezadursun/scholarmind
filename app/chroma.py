@@ -3,12 +3,15 @@
 
 import os
 
+chroma_supported = True
+
 try:
     import chromadb
     from chromadb.config import Settings
     from chromadb.utils import embedding_functions
-except ImportError:
-    chromadb = None
+except Exception as e:
+    chroma_supported = False
+
 
 # Chroma istemcisi başlatılıyor
 chroma_client = chromadb.Client(Settings(
@@ -30,19 +33,35 @@ collection = chroma_client.get_or_create_collection(
 
 def add_to_memory(id: str, content: str, metadata: dict = None):
     """
-    Yeni bir içerik hafızaya eklenir.
-    ID benzersiz olmalıdır (örn: paper_123).
-    Metadata örn: {"source": "PDF", "author": "Smith"}
+    Yeni bir içeriği hafızaya ekler.
     """
-    collection.add(
-        documents=[content],
-        ids=[id],
-        metadatas=[metadata or {}]
-    )
+    if not chroma_supported:
+        print("⛔ Chroma desteklenmiyor. Hafızaya ekleme yapılamaz.")
+        return
+
+    try:
+        collection.add(
+            documents=[content],
+            ids=[id],
+            metadatas=[metadata or {}]
+        )
+    except Exception as e:
+        print(f"❌ Chroma ekleme hatası: {e}")
+
 
 def search_memory(query: str, top_k=3):
     """
     Hafızadaki içerikler arasında semantik olarak en benzer olanları bulur.
     """
-    results = collection.query(query_texts=[query], n_results=top_k)
-    return results
+    if not chroma_supported:
+        print("⛔ Chroma desteklenmiyor. Hafızadan arama yapılamaz.")
+        return {"documents": [[]], "metadatas": [[]]}
+
+    try:
+        results = collection.query(query_texts=[query], n_results=top_k)
+        return results
+    except Exception as e:
+        print(f"❌ Chroma sorgusu başarısız oldu: {e}")
+        return {"documents": [[]], "metadatas": [[]]}
+
+
