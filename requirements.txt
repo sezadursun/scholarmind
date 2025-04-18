@@ -1,0 +1,9 @@
+streamlit
+openai
+requests
+PyPDF2
+sentence-transformers
+faiss-cpu
+pymilvus
+# chromadb  # optional, only needed if using Chroma
+python-dotenv
