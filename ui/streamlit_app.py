@@ -6,7 +6,7 @@ from openai import OpenAI
 import openai
 
 from ui.scholarmind_ui_theme import apply_scholarmind_theme
-apply_scholarmind_theme()
+apply_scholarmind_theme()  # ✔ Tema uygulaması zaten burada
 
 from app.paper_search import search_papers
 from app.summarize import summarize_paper, summarize_fulltext
@@ -19,9 +19,8 @@ from app.rag_milvus import streamlit_memory_qa_tab
 from app.milvus_engine import add_to_milvus
 from PyPDF2 import PdfReader
 
-st.set_page_config(page_title="📚 Academic Research Assistant", layout="wide")
-apply_scholarmind_theme()
-
+# Bu satır tekrar olmuştu, kaldırıldı:
+# st.set_page_config(page_title="📚 Academic Research Assistant", layout="wide")
 
 # 🔐 OpenAI API Key giriş alanı
 st.sidebar.markdown("## 🔐 OpenAI API Key")
@@ -32,11 +31,11 @@ if not api_key:
     st.stop()
 
 # 📚 Uygulama başlığı
-st.title("📚 Akademik Araştırma Asistanı")
-st.caption("Konu ver, biz senin yerine en iyi makaleleri bulup özetleyelim.")
+st.title(":brain: ScholarMind")
+st.caption("Bilge araştırma hafızanız. Arayın, özetleyin, hatırlayın.")
 
 # ✅ Sekmeler
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+TAB_LABELS = [
     "🔍 Makale Ara", 
     "📌 PDF Yükle", 
     "🔁 Geçmiş Araştırmalarım", 
@@ -44,8 +43,8 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "📖 Makaleye Soru Sor",
     "🧠 Hafızaya Dayalı Soru",
     "📌 PDF'yi Hafızaya Ekle"
-])
-
+]
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(TAB_LABELS)
 
 # 🔍 Makale Arama Sekmesi
 with tab1:
