@@ -7,3 +7,5 @@ faiss-cpu
 pymilvus
 # chromadb  # optional, only needed if using Chroma
 python-dotenv
+chromadb>=0.4.0
+
