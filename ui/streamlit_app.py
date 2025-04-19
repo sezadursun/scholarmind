@@ -9,11 +9,11 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from openai import OpenAI
-from openai import AuthenticationError, InvalidRequestError
+from openai.error import AuthenticationError, InvalidRequestError  # ✅ Düzeltildi
 
 from app.paper_search import search_papers
 from app.summarize import summarize_paper, summarize_fulltext
-from app.prompts import SYSTEM_MESSAGE, SUMMARY_PROMPT_TEMPLATE
+from app.prompts import SYSTEM_MESSAGE
 from app.faiss_engine import add_text_to_index, search_similar, suggest_topics_based_on_text
 from app.chroma import add_to_memory as add_to_chroma_memory, search_memory
 from app.arxiv import search_arxiv
@@ -49,8 +49,7 @@ with st.sidebar.expander("🤖 GPT-4 Erişim Testi"):
                 st.error(f"⚠️ Hata: {str(e)}")
         except Exception as e:
             st.error(f"❗ Beklenmeyen hata: {str(e)}")
-
-            
+       
 # 🧠 ScholarMind
 st.title(":brain: ScholarMind")
 st.caption("Bilge araştırma hafızanız. Arayın, özetleyin, hatırlayın.")
