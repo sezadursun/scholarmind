@@ -1,10 +1,12 @@
-import streamlit as st  # 👈 Bu en başta olmalı
+import os
+os.environ["STREAMLIT_SERVER_FILE_WATCHER_TYPE"] = "none"  # 🔒 Watcher kapatıldı
 
+import streamlit as st  # 👈 En başta olmalı
 from scholarmind_ui_theme import apply_scholarmind_theme
-apply_scholarmind_theme()  # Bu fonksiyonun içinde set_page_config varsa, hemen sonra çağrılır
+apply_scholarmind_theme()  # 🎨 Tema uygulanıyor
 
-# Bundan sonra diğer tüm importlar gelebilir
-import sys, os
+# Diğer importlar
+import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from openai import OpenAI
@@ -21,30 +23,21 @@ from app.rag_milvus import streamlit_memory_qa_tab
 from app.milvus_engine import add_to_milvus
 from PyPDF2 import PdfReader
 
-# Bu satır tekrar olmuştu, kaldırıldı:
-# st.set_page_config(page_title="📚 Academic Research Assistant", layout="wide")
-
-# 🔐 OpenAI API Key giriş alanı
+# 🔐 OpenAI API Key
 st.sidebar.markdown("## 🔐 OpenAI API Key")
 api_key = st.sidebar.text_input("Enter your OpenAI API Key", type="password")
-
 if not api_key:
     st.warning("Please enter your OpenAI API Key in the sidebar to continue.")
     st.stop()
 
-# 📚 Uygulama başlığı
+# 🧠 ScholarMind UI
 st.title(":brain: ScholarMind")
 st.caption("Bilge araştırma hafızanız. Arayın, özetleyin, hatırlayın.")
 
-# ✅ Sekmeler
 TAB_LABELS = [
-    "🔍 Makale Ara", 
-    "📌 PDF Yükle", 
-    "🔁 Geçmiş Araştırmalarım", 
-    "🧪 ArXiv Preprint Arama",
-    "📖 Makaleye Soru Sor",
-    "🧠 Hafızaya Dayalı Soru",
-    "📌 PDF'yi Hafızaya Ekle"
+    "🔍 Makale Ara", "📌 PDF Yükle", "🔁 Geçmiş Araştırmalarım",
+    "🧪 ArXiv Preprint Arama", "📖 Makaleye Soru Sor",
+    "🧠 Hafızaya Dayalı Soru", "📌 PDF'yi Hafızaya Ekle"
 ]
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(TAB_LABELS)
 
