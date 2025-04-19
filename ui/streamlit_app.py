@@ -9,7 +9,8 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from openai import OpenAI
-import openai
+from openai import error as openai_error
+
 from app.paper_search import search_papers
 from app.summarize import summarize_paper, summarize_fulltext
 from app.prompts import SYSTEM_MESSAGE, SUMMARY_PROMPT_TEMPLATE
@@ -39,9 +40,9 @@ with st.sidebar.expander("🤖 GPT-4 Erişim Testi"):
                 max_tokens=5
             )
             st.success("✅ GPT-4 modeline erişiminiz var!")
-        except openai.error.AuthenticationError:
+        except openai_error.AuthenticationError:
             st.error("❌ API anahtarınız geçersiz olabilir.")
-        except openai.error.InvalidRequestError as e:
+        except openai_error.InvalidRequestError as e:
             if "model" in str(e) and "not found" in str(e):
                 st.error("🚫 GPT-4 modeline erişiminiz yok.")
             else:
@@ -49,14 +50,13 @@ with st.sidebar.expander("🤖 GPT-4 Erişim Testi"):
         except Exception as e:
             st.error(f"❗ Beklenmeyen hata: {str(e)}")
 
-
 # 🧠 ScholarMind
 st.title(":brain: ScholarMind")
 st.caption("Bilge araştırma hafızanız. Arayın, özetleyin, hatırlayın.")
 
 TAB_LABELS = [
     "🔍 Makale Ara", "📌 PDF Yükle", "🔁 Geçmiş Araştırmalarım",
-    "🥪 ArXiv Preprint Arama", "📖 Makaleye Soru Sor",
+    "🥚 ArXiv Preprint Arama", "📖 Makaleye Soru Sor",
     "🧠 Hafızaya Dayalı Soru", "📌 PDF'yi Hafızaya Ekle"
 ]
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(TAB_LABELS)
