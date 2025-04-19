@@ -27,22 +27,22 @@ if not api_key:
     st.warning("Please enter your OpenAI API Key in the sidebar to continue.")
     st.stop()
 
-# ✅ GPT-4 MODEL TESTİ
-with st.sidebar.expander("🤖 GPT-4 Erişim Testi"):
-    if st.button("GPT-4 Erişimini Test Et"):
+# ✅ GPT-4o MODEL TESTİ
+with st.sidebar.expander("🤖 GPT-4o Erişim Testi"):
+    if st.button("GPT-4o Erişimini Test Et"):
         try:
             client = OpenAI(api_key=api_key)
             response = client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o",
                 messages=[{"role": "user", "content": "Sadece çalıştığını kanıtla"}],
                 max_tokens=5
             )
-            st.success("✅ GPT-4 modeline erişiminiz var!")
+            st.success("✅ GPT-4o modeline erişiminiz var!")
         except Exception as e:
             if "Incorrect API key" in str(e) or "401" in str(e):
                 st.error("❌ API anahtarınız geçersiz olabilir.")
             elif "model" in str(e) and "not found" in str(e):
-                st.error("🚫 GPT-4 modeline erişiminiz yok.")
+                st.error("🚫 GPT-4o modeline erişiminiz yok.")
             else:
                 st.error(f"⚠️ Bilinmeyen hata: {str(e)}")
 
@@ -119,7 +119,7 @@ Hepsini sade ve akademik bir dille açıkla (6-10 cümle arası).
 """
                         try:
                             response = client.chat.completions.create(
-                                model="gpt-4",
+                                model="gpt-4o",
                                 messages=[
                                     {"role": "system", "content": SYSTEM_MESSAGE},
                                     {"role": "user", "content": detailed_prompt}
@@ -127,7 +127,7 @@ Hepsini sade ve akademik bir dille açıkla (6-10 cümle arası).
                             )
                             st.info(response.choices[0].message.content.strip())
                         except Exception as e:
-                            st.error(f"GPT-4 hata: {str(e)}")
+                            st.error(f"GPT-4o hata: {str(e)}")
 
                 st.markdown("### 🔍 Benzer Makaleler")
                 similar = search_similar(combined_text, top_k=3, api_key=api_key)
