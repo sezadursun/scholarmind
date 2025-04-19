@@ -40,7 +40,7 @@ Yaratıcı, sade ama bilimsel ve etkili bir cevap ver:
 
     client = OpenAI(api_key=api_key)
     response = client.chat.completions.create(
-        model="gpt-4",
+        model="gpt-4o",
         messages=[
             {"role": "system", "content": system_msg},
             {"role": "user", "content": user_prompt}
@@ -55,7 +55,7 @@ def streamlit_memory_qa_tab(api_key: str):
     import streamlit as st
     from app.rag_milvus import answer_question_with_memory
 
-    st.subheader("\U0001f9e0 Hafızaya Dayalı Soru-Cevap (Milvus + GPT-4)")
+    st.subheader("\U0001f9e0 Hafızaya Dayalı Soru-Cevap (Milvus + GPT-4o)")
 
     user_id = st.text_input("Kullanıcı ID (size özgü bir ad girin):", value="demo-user")
     question = st.text_area("Sormak istediğiniz soru:", height=100)
