@@ -1,17 +1,15 @@
 import os
-os.environ["STREAMLIT_SERVER_FILE_WATCHER_TYPE"] = "none"  # 🔒 Watcher kapatıldı
+os.environ["STREAMLIT_SERVER_FILE_WATCHER_TYPE"] = "none"
 
-import streamlit as st  # 👈 En başta olmalı
+import streamlit as st
 from scholarmind_ui_theme import apply_scholarmind_theme
-apply_scholarmind_theme()  # 🎨 Tema uygulanıyor
+apply_scholarmind_theme()
 
-# Diğer importlar
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from openai import OpenAI
 import openai
-
 from app.paper_search import search_papers
 from app.summarize import summarize_paper, summarize_fulltext
 from app.prompts import SYSTEM_MESSAGE, SUMMARY_PROMPT_TEMPLATE
@@ -23,34 +21,38 @@ from app.rag_milvus import streamlit_memory_qa_tab
 from app.milvus_engine import add_to_milvus
 from PyPDF2 import PdfReader
 
-# 🔐 OpenAI API Key
+# 🔐 API Key
 st.sidebar.markdown("## 🔐 OpenAI API Key")
 api_key = st.sidebar.text_input("Enter your OpenAI API Key", type="password")
 if not api_key:
     st.warning("Please enter your OpenAI API Key in the sidebar to continue.")
     st.stop()
 
-# 🧠 ScholarMind UI
+# 🧠 ScholarMind
 st.title(":brain: ScholarMind")
 st.caption("Bilge araştırma hafızanız. Arayın, özetleyin, hatırlayın.")
 
 TAB_LABELS = [
     "🔍 Makale Ara", "📌 PDF Yükle", "🔁 Geçmiş Araştırmalarım",
-    "🧪 ArXiv Preprint Arama", "📖 Makaleye Soru Sor",
+    "🥪 ArXiv Preprint Arama", "📖 Makaleye Soru Sor",
     "🧠 Hafızaya Dayalı Soru", "📌 PDF'yi Hafızaya Ekle"
 ]
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(TAB_LABELS)
 
-# 🔍 Makale Arama Sekmesi
+# 🔍 Makale Arama
 with tab1:
     query = st.text_input("🔍 Konu:", "transformer visual recognition")
-    year = st.slider("📅 Minimum Yayın Yılı", min_value=2000, max_value=2024, value=2020)
+    year = st.slider("📅 Minimum Yayın Yılı", 2000, 2024, 2020)
     limit = st.selectbox("📄 Kaç makale getirilsin?", [3, 5, 7, 10], index=1)
     run = st.button("Ara ve Özetle")
 
     if run:
         with st.spinner("Makaleler aranıyor..."):
-            papers = search_papers(query=query, year=year, limit=limit)
+            try:
+                papers = search_papers(query=query, year=year, limit=limit)
+            except Exception as e:
+                st.error(f"📱 Semantic Scholar API hatası: {str(e)}")
+                st.stop()
 
         if not papers:
             st.warning("❗ Aradığınız konuda sonuç bulunamadı.")
@@ -58,19 +60,20 @@ with tab1:
             st.success(f"{len(papers)} makale bulundu.")
             for idx, paper in enumerate(papers, 1):
                 st.markdown(f"## {idx}. {paper['title']}")
-
                 authors = ", ".join([a['name'] for a in paper['authors']])
                 st.markdown(f"**Yazarlar:** {authors}  \n**Yıl:** {paper['year']}  \n**Alıntı:** {paper['citationCount']}")
                 st.markdown(f"🔗 [Orijinal Makale]({paper['url']})")
 
                 with st.spinner("Kısa özet hazırlanıyor..."):
-                    short_summary = summarize_paper({
-                        "title": paper["title"],
-                        "abstract": paper["abstract"]
-                    }, api_key)
-                st.success(f"**Kısa Özet:** {short_summary}")
+                    try:
+                        short_summary = summarize_paper({
+                            "title": paper["title"],
+                            "abstract": paper["abstract"]
+                        }, api_key)
+                        st.success(f"**Kısa Özet:** {short_summary}")
+                    except Exception as e:
+                        st.error(f"⚠️ Özetleme hatası: {str(e)}")
 
-                # ✅ Hafızaya ekle
                 combined_text = f"{paper['title']} - {short_summary}"
                 add_text_to_index(combined_text, source_id=paper['title'], api_key=api_key)
                 add_to_chroma_memory(
@@ -79,7 +82,7 @@ with tab1:
                     metadata={"source": "SemanticScholar", "title": paper['title']}
                 )
 
-                with st.expander("📘 Detaylı Özet (isteğe bağlı açılır)"):
+                with st.expander("📜 Detaylı Özet (isteğe bağlı açılır)"):
                     with st.spinner("Detaylı özet hazırlanıyor..."):
                         detailed_prompt = f"""
 Makale başlığı: {paper['title']}
@@ -95,15 +98,18 @@ Bu makaleyi aşağıdaki başlıklar altında detaylıca analiz et:
 
 Hepsini sade ve akademik bir dille açıkla (6-10 cümle arası).
 """
-                        client = OpenAI(api_key=api_key)
-                        response = client.chat.completions.create(
-                            model="gpt-4",
-                            messages=[
-                                {"role": "system", "content": SYSTEM_MESSAGE},
-                                {"role": "user", "content": detailed_prompt}
-                            ]
-                        )
-                        st.info(response.choices[0].message.content.strip())
+                        try:
+                            client = OpenAI(api_key=api_key)
+                            response = client.chat.completions.create(
+                                model="gpt-4",
+                                messages=[
+                                    {"role": "system", "content": SYSTEM_MESSAGE},
+                                    {"role": "user", "content": detailed_prompt}
+                                ]
+                            )
+                            st.info(response.choices[0].message.content.strip())
+                        except Exception as e:
+                            st.error(f"GPT-4 hata: {str(e)}")
 
                 st.markdown("### 🔍 Benzer Makaleler")
                 similar = search_similar(combined_text, top_k=3, api_key=api_key)
