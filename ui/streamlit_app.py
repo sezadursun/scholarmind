@@ -9,7 +9,6 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from openai import OpenAI
-from openai import error as openai_error
 
 from app.paper_search import search_papers
 from app.summarize import summarize_paper, summarize_fulltext
@@ -40,9 +39,9 @@ with st.sidebar.expander("🤖 GPT-4 Erişim Testi"):
                 max_tokens=5
             )
             st.success("✅ GPT-4 modeline erişiminiz var!")
-        except openai_error.AuthenticationError:
+        except openai.AuthenticationError:
             st.error("❌ API anahtarınız geçersiz olabilir.")
-        except openai_error.InvalidRequestError as e:
+        except openai.InvalidRequestError as e:
             if "model" in str(e) and "not found" in str(e):
                 st.error("🚫 GPT-4 modeline erişiminiz yok.")
             else:
