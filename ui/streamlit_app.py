@@ -8,7 +8,7 @@ apply_scholarmind_theme()
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from openai import OpenAI
+from openai import OpenAI, AuthenticationError, InvalidRequestError
 
 from app.paper_search import search_papers
 from app.summarize import summarize_paper, summarize_fulltext
@@ -39,16 +39,15 @@ with st.sidebar.expander("🤖 GPT-4 Erişim Testi"):
                 max_tokens=5
             )
             st.success("✅ GPT-4 modeline erişiminiz var!")
-        except openai.AuthenticationError:
+        except AuthenticationError:
             st.error("❌ API anahtarınız geçersiz olabilir.")
-        except openai.InvalidRequestError as e:
+        except InvalidRequestError as e:
             if "model" in str(e) and "not found" in str(e):
                 st.error("🚫 GPT-4 modeline erişiminiz yok.")
             else:
                 st.error(f"⚠️ Hata: {str(e)}")
         except Exception as e:
             st.error(f"❗ Beklenmeyen hata: {str(e)}")
-
 # 🧠 ScholarMind
 st.title(":brain: ScholarMind")
 st.caption("Bilge araştırma hafızanız. Arayın, özetleyin, hatırlayın.")
