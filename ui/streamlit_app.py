@@ -9,7 +9,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from openai import OpenAI
-from openai.error import AuthenticationError, InvalidRequestError  # ✅ Düzeltildi
+from openai._exceptions import AuthenticationError, InvalidRequestError
 
 from app.paper_search import search_papers
 from app.summarize import summarize_paper, summarize_fulltext
@@ -49,7 +49,7 @@ with st.sidebar.expander("🤖 GPT-4 Erişim Testi"):
                 st.error(f"⚠️ Hata: {str(e)}")
         except Exception as e:
             st.error(f"❗ Beklenmeyen hata: {str(e)}")
-       
+
 # 🧠 ScholarMind
 st.title(":brain: ScholarMind")
 st.caption("Bilge araştırma hafızanız. Arayın, özetleyin, hatırlayın.")
@@ -121,7 +121,6 @@ Bu makaleyi aşağıdaki başlıklar altında detaylıca analiz et:
 Hepsini sade ve akademik bir dille açıkla (6-10 cümle arası).
 """
                         try:
-                            client = OpenAI(api_key=api_key)
                             response = client.chat.completions.create(
                                 model="gpt-4",
                                 messages=[
@@ -200,7 +199,6 @@ with tab5:
                         answer = answer_with_context(question, api_key)
                         st.success("✅ Yanıt:")
                         st.write(answer)
-
             except Exception as e:
                 st.error(f"Hata oluştu: {str(e)}")
 
@@ -208,7 +206,7 @@ with tab5:
 with tab6:
     streamlit_memory_qa_tab(api_key)
 
-    # 📌 PDF'yi Hafızaya Ekle Sekmesi
+# 📌 PDF'yi Milvus Hafızasına Ekle Sekmesi
 with tab7:
     st.subheader("📌 PDF'yi Milvus Hafızasına Ekle")
 
@@ -229,7 +227,5 @@ with tab7:
                     title = uploaded_file.name.replace(".pdf", "")
                     add_to_milvus(user_id=user_id, title=title, text=full_text, api_key=api_key)
                     st.success(f"✅ '{title}' başlıklı içerik hafızaya eklendi!")
-
             except Exception as e:
                 st.error(f"Hata oluştu: {str(e)}")
-
