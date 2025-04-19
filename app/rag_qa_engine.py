@@ -40,7 +40,7 @@ def get_similar_chunks(question: str, top_k: int = 3) -> List[str]:
     return [stored_chunks[i] for i in indices[0]]
 
 def answer_with_context(question: str, api_key: str, top_k: int = 3) -> str:
-    """GPT-4 ile, en benzer chunk'lara dayanarak soru yanıtla."""
+    """GPT-4o ile, en benzer chunk'lara dayanarak soru yanıtla."""
     top_chunks = get_similar_chunks(question, top_k=top_k)
     context = "\n\n".join(top_chunks)
     prompt = f"""
@@ -55,7 +55,7 @@ Lütfen sadece yukarıdaki içeriklere dayanarak soruyu yanıtla. Tahminde bulun
 
     client = OpenAI(api_key=api_key)
     response = client.chat.completions.create(
-        model="gpt-4",
+        model="gpt-4o",
         messages=[
             {"role": "system", "content": "Sen bir akademik asistan GPT'sin. Sadece içerikteki bilgiye dayanarak cevap ver."},
             {"role": "user", "content": prompt}
