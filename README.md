@@ -8,7 +8,7 @@ This project allows academic research via Semantic Scholar and GPT summarization
 
 AI-powered assistant for researchers to:
 - 🔍 Search academic papers by topic
-- 📝 Summarize abstracts and full papers using GPT-4
+- 📝 Summarize abstracts and full papers using GPT-4o
 - 📄 Upload PDFs and ask direct questions about content
 - 🔁 Store and recall past research memory using **Milvus** or optional **Chroma**
 - 🧠 Ask questions with **RAG (retrieval-based)** or 🌱 **AAG (analogy-based)** generation modes
@@ -32,7 +32,7 @@ AI-powered assistant for researchers to:
 
 - [x] **Python 3.10** – Tüm uygulamanın temel çalışma ortamı
 - [x] **Streamlit** – UI/UX arayüzü, sekmeli yapı ve kullanıcı etkileşimi
-- [x] **OpenAI GPT-4 API**
+- [x] **OpenAI GPT-4o API**
   - 🔹 `chat/completions` ile özetleme ve Q&A
   - 🔹 `embeddings` ile vektörleştirme
 - [x] **Semantic Scholar API** – Literatür taraması ve makale başlıkları
