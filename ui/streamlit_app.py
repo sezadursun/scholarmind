@@ -9,8 +9,6 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from openai import OpenAI
-from openai._exceptions import AuthenticationError, InvalidRequestError
-
 from app.paper_search import search_papers
 from app.summarize import summarize_paper, summarize_fulltext
 from app.prompts import SYSTEM_MESSAGE
@@ -29,7 +27,7 @@ if not api_key:
     st.warning("Please enter your OpenAI API Key in the sidebar to continue.")
     st.stop()
 
-# ✅ MODEL TESTİ
+# ✅ GPT-4 MODEL TESTİ
 with st.sidebar.expander("🤖 GPT-4 Erişim Testi"):
     if st.button("GPT-4 Erişimini Test Et"):
         try:
@@ -40,15 +38,14 @@ with st.sidebar.expander("🤖 GPT-4 Erişim Testi"):
                 max_tokens=5
             )
             st.success("✅ GPT-4 modeline erişiminiz var!")
-        except AuthenticationError:
-            st.error("❌ API anahtarınız geçersiz olabilir.")
-        except InvalidRequestError as e:
-            if "model" in str(e) and "not found" in str(e):
+        except Exception as e:
+            if "Incorrect API key" in str(e) or "401" in str(e):
+                st.error("❌ API anahtarınız geçersiz olabilir.")
+            elif "model" in str(e) and "not found" in str(e):
                 st.error("🚫 GPT-4 modeline erişiminiz yok.")
             else:
-                st.error(f"⚠️ Hata: {str(e)}")
-        except Exception as e:
-            st.error(f"❗ Beklenmeyen hata: {str(e)}")
+                st.error(f"⚠️ Bilinmeyen hata: {str(e)}")
+
 
 # 🧠 ScholarMind
 st.title(":brain: ScholarMind")
