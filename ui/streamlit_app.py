@@ -28,6 +28,28 @@ if not api_key:
     st.warning("Please enter your OpenAI API Key in the sidebar to continue.")
     st.stop()
 
+# ✅ MODEL TESTİ
+with st.sidebar.expander("🤖 GPT-4 Erişim Testi"):
+    if st.button("GPT-4 Erişimini Test Et"):
+        try:
+            client = OpenAI(api_key=api_key)
+            response = client.chat.completions.create(
+                model="gpt-4",
+                messages=[{"role": "user", "content": "Sadece çalıştığını kanıtla"}],
+                max_tokens=5
+            )
+            st.success("✅ GPT-4 modeline erişiminiz var!")
+        except openai.error.AuthenticationError:
+            st.error("❌ API anahtarınız geçersiz olabilir.")
+        except openai.error.InvalidRequestError as e:
+            if "model" in str(e) and "not found" in str(e):
+                st.error("🚫 GPT-4 modeline erişiminiz yok.")
+            else:
+                st.error(f"⚠️ Hata: {str(e)}")
+        except Exception as e:
+            st.error(f"❗ Beklenmeyen hata: {str(e)}")
+
+
 # 🧠 ScholarMind
 st.title(":brain: ScholarMind")
 st.caption("Bilge araştırma hafızanız. Arayın, özetleyin, hatırlayın.")
