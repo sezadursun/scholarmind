@@ -46,15 +46,50 @@ with st.sidebar.expander("🤖 GPT-4o Erişim Testi"):
             else:
                 st.error(f"⚠️ Bilinmeyen hata: {str(e)}")
 
-
 # 🧠 ScholarMind
+
+st.markdown(
+    """
+    <style>
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0.5rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        background-color: #F0F0F0;
+        color: #333;
+        padding: 0.6rem 1rem;
+        border-radius: 10px;
+        border: 1px solid #d0d0d0;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+    }
+
+    .stTabs [aria-selected="true"] {
+        background-color: #4B3F72 !important;
+        color: white !important;
+        border: 1px solid #4B3F72;
+    }
+
+    .stTabs [data-baseweb="tab"]:hover {
+        background-color: #E0E0E0;
+        cursor: pointer;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 st.title(":brain: ScholarMind")
 st.caption("Bilge araştırma hafızanız. Arayın, özetleyin, hatırlayın.")
 
 TAB_LABELS = [
-    "🔍 Makale Ara", "📌 PDF Yükle", "🔁 Geçmiş Araştırmalarım",
-    "🥚 ArXiv Preprint Arama", "📖 Makaleye Soru Sor",
-    "🧠 Hafızaya Dayalı Soru", "📌 PDF'yi Hafızaya Ekle"
+    "🔍 Ara", "📎 PDF", "⏪ Geçmiş",
+    "🥚 ArXiv", "📖 Soru Sor", "🧠 Hafızadan Sor", "🧾 PDF ➕ Hafıza"
 ]
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(TAB_LABELS)
 
