@@ -55,7 +55,7 @@ Metin:
 """
 
     client = OpenAI(api_key=api_key)
-    response = client.chat.completions.create(
+    response = clienot.chat.completions.create(
         model="gpt-4",
         messages=[
             {"role": "system", "content": "Sen araştırma konularında öneriler sunan bir asistansın."},
