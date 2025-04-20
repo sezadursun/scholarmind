@@ -18,6 +18,7 @@ from app.arxiv import search_arxiv
 from app.rag_qa_engine import build_index_from_text, answer_with_context
 from app.rag_milvus import streamlit_memory_qa_tab
 from app.milvus_engine import add_to_milvus
+from app.milvus_engine import list_titles
 from PyPDF2 import PdfReader
 
 # 🔐 API Key
