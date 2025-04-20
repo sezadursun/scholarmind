@@ -123,3 +123,20 @@ def list_titles(user_id: str, session_user_id: str) -> List[str]:
     all_doc_ids = [res["doc_id"] for res in results]
     grouped = list(set([doc_id.split("_chunk_")[0] for doc_id in all_doc_ids]))
     return grouped
+
+# ⬇️ Belirli bir kullanıcının belirli bir dokümanını sil
+def delete_doc_id(user_id: str, doc_id: str) -> bool:
+    """Belirtilen kullanıcıya ve doc_id'ye ait kayıtları siler."""
+    create_collection()
+    collection = Collection(name=COLLECTION_NAME)
+    collection.load()
+
+    expr = f"user_id == '{user_id}' and doc_id like '{doc_id}_chunk_%'"
+    try:
+        deleted_count = collection.delete(expr)
+        collection.flush()
+        return True
+    except Exception as e:
+        print(f"Silme işlemi sırasında hata: {str(e)}")
+        return False
+
