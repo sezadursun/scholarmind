@@ -20,7 +20,18 @@ EMBEDDING_MODEL = "text-embedding-ada-002"
 # 📄 Koleksiyon oluşturma
 def create_collection():
     if COLLECTION_NAME in utility.list_collections():
+        collection = Collection(name=COLLECTION_NAME)
+        if not collection.has_index():
+            collection.create_index(
+                field_name="embedding",
+                index_params={
+                    "metric_type": "L2",
+                    "index_type": "IVF_FLAT",
+                    "params": {"nlist": 1024}
+                }
+            )
         return
+
     fields = [
         FieldSchema(name="id", dtype=DataType.VARCHAR, is_primary=True, auto_id=False, max_length=64),
         FieldSchema(name="user_id", dtype=DataType.VARCHAR, max_length=64),
@@ -31,12 +42,15 @@ def create_collection():
     collection = Collection(name=COLLECTION_NAME, schema=schema)
     collection.create()
 
-    # 🔍 Arama yapılabilmesi için embedding alanına index oluştur
+    # 🔍 Index oluşturulmazsa arama yapılamaz
     collection.create_index(
         field_name="embedding",
-        index_params={"metric_type": "L2", "index_type": "IVF_FLAT", "params": {"nlist": 1024}}
+        index_params={
+            "metric_type": "L2",
+            "index_type": "IVF_FLAT",
+            "params": {"nlist": 1024}
+        }
     )
-
 
 # 🧠 Embedding oluştur
 def get_embedding(text: str, api_key: str) -> np.ndarray:
