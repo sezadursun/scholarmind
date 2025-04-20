@@ -88,10 +88,9 @@ st.title(":brain: ScholarMind")
 st.caption("Bilge araştırma hafızanız. Arayın, özetleyin, hatırlayın.")
 
 TAB_LABELS = [
-    "🔍 Ara", "📎 PDF", "⏪ Geçmiş",
-    "🥚 ArXiv", "📖 Soru Sor", "🧠 Hafızadan Sor", "🧾 PDF ➕ Hafıza"
+    "🔍 Ara", "⏪ Geçmiş", "🥚 ArXiv", "📖 Soru Sor", "🧠 Hafızadan Sor", "🧾 PDF ➕ Hafıza"
 ]
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(TAB_LABELS)
+tab1, tab3, tab4, tab5, tab6, tab7 = st.tabs(TAB_LABELS)
 
 # 🔍 Makale Arama
 with tab1:
