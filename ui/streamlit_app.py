@@ -280,23 +280,23 @@ with tab7:
             except Exception as e:
                 st.error(f"Hata oluştu: {str(e)}")
 
-# 🔎 Kayıtlı başlıkları listeleme sekmesi (isteğe bağlı bir tab ya da sidebar bölümüne eklenebilir)
+# 📂 Başlıkları Gör Sekmesi
+with tab8:
+    st.subheader("📚 Kayıtlı Başlıklarınızı Görüntüleyin")
 
-st.subheader("📚 Kayıtlı Başlıklarınızı Görüntüleyin")
+    current_user_id = st.text_input("👤 Kullanıcı ID (başlıkları görmek için):", value="demo-user")
 
-current_user_id = st.text_input("👤 Kullanıcı ID (başlıkları görmek için):", value="demo-user")
-
-if st.button("📂 Başlıkları Göster") and current_user_id:
-    try:
-        titles = list_titles(user_id=current_user_id, session_user_id=current_user_id)
-        if titles:
-            st.success(f"✅ {len(titles)} başlık bulundu:")
-            for title in titles:
-                st.markdown(f"- 📄 **{title}**")
-        else:
-            st.info("🔍 Henüz eklenmiş bir başlık bulunamadı.")
-    except PermissionError as e:
-        st.error(f"🚫 Yetkisiz erişim: {str(e)}")
-    except Exception as e:
-        st.error(f"⚠️ Bir hata oluştu: {str(e)}")
-
+    if st.button("📂 Başlıkları Göster"):
+        try:
+            titles = list_titles(user_id=current_user_id, session_user_id=current_user_id)
+            if titles:
+                st.success(f"✅ {len(titles)} başlık bulundu:")
+                for title in titles:
+                    st.markdown(f"- 📄 **{title}**")
+            else:
+                st.info("🔍 Henüz eklenmiş bir başlık bulunamadı.")
+        except PermissionError as e:
+            st.error(f"🚫 Yetkisiz erişim: {str(e)}")
+        except Exception as e:
+            st.error(f"⚠️ Bir hata oluştu: {str(e)}")
+            
