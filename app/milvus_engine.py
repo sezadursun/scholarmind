@@ -28,7 +28,15 @@ def create_collection():
         FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=DIMENSION)
     ]
     schema = CollectionSchema(fields, description="Research memory by user")
-    Collection(name=COLLECTION_NAME, schema=schema).create()
+    collection = Collection(name=COLLECTION_NAME, schema=schema)
+    collection.create()
+    
+    # 🔍 Vektör alanı için index oluştur
+    collection.create_index(
+        field_name="embedding",
+        index_params={"metric_type": "L2", "index_type": "IVF_FLAT", "params": {"nlist": 1024}}
+    )
+
 
 # 🧠 Embedding oluştur
 def get_embedding(text: str, api_key: str) -> np.ndarray:
