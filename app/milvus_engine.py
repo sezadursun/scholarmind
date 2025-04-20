@@ -3,10 +3,10 @@ from openai import OpenAI
 import numpy as np
 import uuid
 
-# 🔌 Zilliz Cloud bağlantısı
+# 🔌 Milvus bağlantısı (Zilliz Cloud)
 connections.connect(
     alias="default",
-    uri="https://in03-3ebddd479cd8e47.serverless.gcp-us-west1.cloud.zilliz.com", 
+    uri="https://in03-3ebddd479cd8e47.serverless.gcp-us-west1.cloud.zilliz.com",
     user="db_3ebddd479cd8e47",
     password="Os2*%t,c<3QOcpq6",
     secure=True
@@ -18,6 +18,7 @@ DIMENSION = 1536  # text-embedding-ada-002
 EMBEDDING_MODEL = "text-embedding-ada-002"
 
 # 📄 Koleksiyon oluşturma
+
 def create_collection():
     if COLLECTION_NAME in utility.list_collections():
         collection = Collection(name=COLLECTION_NAME)
@@ -35,14 +36,14 @@ def create_collection():
     fields = [
         FieldSchema(name="id", dtype=DataType.VARCHAR, is_primary=True, auto_id=False, max_length=64),
         FieldSchema(name="user_id", dtype=DataType.VARCHAR, max_length=64),
-        FieldSchema(name="title", dtype=DataType.VARCHAR, max_length=512),
+        FieldSchema(name="doc_id", dtype=DataType.VARCHAR, max_length=128),
+        FieldSchema(name="chunk", dtype=DataType.VARCHAR, max_length=8192),
         FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=DIMENSION)
     ]
-    schema = CollectionSchema(fields, description="Research memory by user")
+    schema = CollectionSchema(fields, description="Chunked document memory")
     collection = Collection(name=COLLECTION_NAME, schema=schema)
     collection.create()
 
-    # 🔍 Index oluşturulmazsa arama yapılamaz
     collection.create_index(
         field_name="embedding",
         index_params={
@@ -52,24 +53,46 @@ def create_collection():
         }
     )
 
+
 # 🧠 Embedding oluştur
+
 def get_embedding(text: str, api_key: str) -> np.ndarray:
     client = OpenAI(api_key=api_key)
     response = client.embeddings.create(input=[text], model=EMBEDDING_MODEL)
     return np.array(response.data[0].embedding, dtype=np.float32)
 
+# 🧩 Chunk metni
+
+def chunk_text(text: str, chunk_size: int = 500):
+    words = text.split()
+    return [" ".join(words[i:i+chunk_size]) for i in range(0, len(words), chunk_size)]
+
 # 💾 Milvus'a veri ekle
-def add_to_milvus(user_id: str, title: str, text: str, api_key: str):
+
+def add_to_milvus(user_id: str, doc_id: str, text: str, api_key: str):
     create_collection()
     collection = Collection(name=COLLECTION_NAME)
-    vector = get_embedding(text, api_key)
-    record_id = str(uuid.uuid4())
-    data = [[record_id], [user_id], [title], [vector.tolist()]]
-    collection.insert(data)
+
+    chunks = chunk_text(text)
+    records = []
+    for i, chunk in enumerate(chunks):
+        vector = get_embedding(chunk, api_key)
+        record_id = str(uuid.uuid4())
+        records.append([
+            record_id,
+            user_id,
+            f"{doc_id}_chunk_{i}",
+            chunk,
+            vector.tolist()
+        ])
+
+    records = list(map(list, zip(*records)))  # Transpose
+    collection.insert(records)
     collection.flush()
 
 # 🔍 Arama yap
-def search_milvus(query: str, user_id: str, api_key: str, top_k: int = 3):
+
+def search_milvus(query: str, user_id: str, api_key: str, top_k: int = 5):
     create_collection()
     collection = Collection(name=COLLECTION_NAME)
     collection.load()
@@ -81,8 +104,29 @@ def search_milvus(query: str, user_id: str, api_key: str, top_k: int = 3):
         param={"metric_type": "L2", "params": {"nprobe": 10}},
         limit=top_k,
         expr=f"user_id == '{user_id}'",
-        output_fields=["title"]
+        output_fields=["doc_id", "chunk"]
     )
 
     hits = results[0]
-    return [(hit.entity.get("title"), hit.distance) for hit in hits]
+    return [(hit.entity.get("doc_id"), hit.entity.get("chunk"), hit.distance) for hit in hits]
+
+# 🔍 Belirli bir kullanıcıya ait başlıkları gruplayarak getir
+from typing import List
+
+def list_titles(user_id: str, session_user_id: str) -> List[str]:
+    """Sadece kullanıcı kendi verilerini görebilir. Chunk başlıklarını gruplayarak döndürür."""
+    if user_id != session_user_id:
+        raise PermissionError("Başka bir kullanıcının kayıtlı içeriklerini görüntüleyemezsiniz.")
+    
+    create_collection()
+    collection = Collection(name=COLLECTION_NAME)
+    collection.load()
+    
+    results = collection.query(
+        expr=f"user_id == '{user_id}'",
+        output_fields=["doc_id"]
+    )
+    
+    all_doc_ids = [res["doc_id"] for res in results]
+    grouped = list(set([doc_id.split("_chunk_")[0] for doc_id in all_doc_ids]))
+    return grouped
