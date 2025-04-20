@@ -4,12 +4,11 @@ from openai import OpenAI
 RAG_SYSTEM_MESSAGE = "Sen, sadece içeriklere dayanarak güvenilir ve akademik yanıtlar veren bir asistansın. Uydurma."
 AAG_SYSTEM_MESSAGE = "Sen yaratıcı, açıklayıcı ve analoji temelli bir GPT asistansın. Kavramları benzetmelerle açıkla. Bilimsel ama sade örneklerle destekle."
 
-# 🧮 RAG + AAG destekli yanıtlayıcı
-
+# 🮮 RAG + AAG destekli yanıtlayıcı
 def answer_question_with_memory(question: str, user_id: str, api_key: str, mode: str = "RAG", top_k: int = 3) -> str:
     """Kullanıcı tercihine göre RAG veya AAG yanıt döner."""
-    top_titles = search_milvus(query=question, user_id=user_id, api_key=api_key, top_k=top_k)
-    context = "\n".join([f"- {title}" for title, _ in top_titles])
+    top_chunks = search_milvus(query=question, user_id=user_id, api_key=api_key, top_k=top_k)
+    context = "\n".join([f"- {doc_id}" for doc_id, _, _ in top_chunks])
 
     if mode == "RAG":
         system_msg = RAG_SYSTEM_MESSAGE
@@ -50,7 +49,6 @@ Yaratıcı, sade ama bilimsel ve etkili bir cevap ver:
 
 
 # 🧬 Streamlit entegrasyonu için sekme kodu:
-
 def streamlit_memory_qa_tab(api_key: str):
     import streamlit as st
     from app.rag_milvus import answer_question_with_memory
@@ -60,7 +58,6 @@ def streamlit_memory_qa_tab(api_key: str):
     user_id = st.text_input("👤 Kullanıcı ID (size özgü bir ad girin):", value="demo-user")
     question = st.text_area("❓ Sormak istediğiniz soru:", height=100)
 
-    # Kullanıcıya açıklamalı seçim sunalım
     response_mode = st.radio(
         "✍️ Yanıt tarzınızı seçin:",
         ["📚 Bilgiye Dayalı (RAG)", "🎨 Analojiyle Açıklayan (AAG)"],
@@ -92,4 +89,3 @@ def streamlit_memory_qa_tab(api_key: str):
                 st.write(result)
             except Exception as e:
                 st.error(f"❌ Hata: {str(e)}")
-
