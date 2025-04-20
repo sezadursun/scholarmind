@@ -1,5 +1,6 @@
 # rag_qa_engine.py
 
+from app.model_selector import get_model
 from typing import List
 from openai import OpenAI
 from sentence_transformers import SentenceTransformer
@@ -40,9 +41,10 @@ def get_similar_chunks(question: str, top_k: int = 3) -> List[str]:
     return [stored_chunks[i] for i in indices[0]]
 
 def answer_with_context(question: str, api_key: str, top_k: int = 3) -> str:
-    """GPT-4o ile, en benzer chunk'lara dayanarak soru yanıtla."""
+    """En benzer chunk'lara dayanarak, uygun LLM ile soruyu yanıtla."""
     top_chunks = get_similar_chunks(question, top_k=top_k)
     context = "\n\n".join(top_chunks)
+
     prompt = f"""
 Aşağıdaki parçalar, bir akademik makaleye aittir:
 
@@ -53,12 +55,17 @@ Soru: {question}
 Lütfen sadece yukarıdaki içeriklere dayanarak soruyu yanıtla. Tahminde bulunma. Cevabın açık, akademik ve net olsun.
 """
 
-    client = OpenAI(api_key=api_key)
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": "Sen bir akademik asistan GPT'sin. Sadece içerikteki bilgiye dayanarak cevap ver."},
-            {"role": "user", "content": prompt}
-        ]
-    )
-    return response.choices[0].message.content.strip()
+    try:
+        client = OpenAI(api_key=api_key)
+        model = get_model("qa")  # 🔁 GPT-4o yerine dinamik seçim
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": "Sen bir akademik asistan GPT'sin. Sadece içerikteki bilgiye dayanarak cevap ver."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        return f"❌ Yanıtlama sırasında hata oluştu: {str(e)}"
+
