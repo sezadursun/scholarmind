@@ -55,22 +55,41 @@ def streamlit_memory_qa_tab(api_key: str):
     import streamlit as st
     from app.rag_milvus import answer_question_with_memory
 
-    st.subheader("\U0001f9e0 Hafızaya Dayalı Soru-Cevap (Milvus + GPT-4o)")
+    st.subheader("🧠 Hafızaya Dayalı Soru-Cevap (Milvus + GPT-4o)")
 
-    user_id = st.text_input("Kullanıcı ID (size özgü bir ad girin):", value="demo-user")
-    question = st.text_area("Sormak istediğiniz soru:", height=100)
-    response_mode = st.radio("Yanıt tarzını seçin:", ["RAG", "AAG"], index=0)
+    user_id = st.text_input("👤 Kullanıcı ID (size özgü bir ad girin):", value="demo-user")
+    question = st.text_area("❓ Sormak istediğiniz soru:", height=100)
 
-    if st.button("Yanıtla") and question and user_id:
-        with st.spinner("Milvus ile en alakalı içerikler aranıyor ve GPT yanıtı getiriliyor..."):
+    # Kullanıcıya açıklamalı seçim sunalım
+    response_mode = st.radio(
+        "✍️ Yanıt tarzınızı seçin:",
+        ["📚 Bilgiye Dayalı (RAG)", "🎨 Analojiyle Açıklayan (AAG)"],
+        index=0
+    )
+
+    with st.expander("ℹ️ RAG ve AAG farkı nedir?"):
+        st.markdown("""
+**📚 Bilgiye Dayalı Yanıt (RAG):**
+- Yalnızca daha önce eklediğiniz makalelerden içeriklere bakar.
+- Akademik, güvenilir ve kısa yanıt verir.
+
+**🎨 Analojiyle Açıklayan Yanıt (AAG):**
+- Cevabı benzetmelerle açıklar.
+- Konuyu sadeleştirerek örneklerle anlatır.
+        """)
+
+    if st.button("🚀 Yanıtla") and question and user_id:
+        with st.spinner("🔍 En alakalı içerikler aranıyor ve GPT yanıtı getiriliyor..."):
             try:
+                mode = "RAG" if "RAG" in response_mode else "AAG"
                 result = answer_question_with_memory(
                     question=question,
                     user_id=user_id,
                     api_key=api_key,
-                    mode=response_mode
+                    mode=mode
                 )
-                st.success("\u2705 Yanıt")
+                st.success("✅ Yanıt")
                 st.write(result)
             except Exception as e:
-                st.error(f"Hata: {str(e)}")
+                st.error(f"❌ Hata: {str(e)}")
+
