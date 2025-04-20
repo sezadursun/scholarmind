@@ -52,9 +52,15 @@ st.markdown(
     """
     <style>
     .stTabs [data-baseweb="tab-list"] {
-        gap: 0.5rem;
-        justify-content: center;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: 0.4rem;
+    }
+
+    .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {
+        display: none;
     }
 
     .stTabs [data-baseweb="tab"] {
@@ -67,12 +73,14 @@ st.markdown(
         font-size: 1rem;
         transition: all 0.3s ease;
         white-space: nowrap;
+        flex-shrink: 0;
     }
 
     .stTabs [aria-selected="true"] {
         background-color: #4B3F72 !important;
         color: white !important;
-        border: 1px solid #4B3F72;
+        border: 2px solid #4B3F72;
+        box-shadow: inset 0 -4px 0 #F44336;
     }
 
     .stTabs [data-baseweb="tab"]:hover {
@@ -83,6 +91,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 st.title(":brain: ScholarMind")
 st.caption("Bilge araştırma hafızanız. Arayın, özetleyin, hatırlayın.")
