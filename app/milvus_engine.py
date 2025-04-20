@@ -2,6 +2,7 @@ from pymilvus import connections, FieldSchema, CollectionSchema, DataType, Colle
 from openai import OpenAI
 import numpy as np
 import uuid
+from typing import List
 
 # 🔌 Milvus bağlantısı (Zilliz Cloud)
 connections.connect(
@@ -18,7 +19,6 @@ DIMENSION = 1536  # text-embedding-ada-002
 EMBEDDING_MODEL = "text-embedding-ada-002"
 
 # 📄 Koleksiyon oluşturma
-
 def create_collection():
     if COLLECTION_NAME in utility.list_collections():
         collection = Collection(name=COLLECTION_NAME)
@@ -53,22 +53,18 @@ def create_collection():
         }
     )
 
-
 # 🧠 Embedding oluştur
-
 def get_embedding(text: str, api_key: str) -> np.ndarray:
     client = OpenAI(api_key=api_key)
     response = client.embeddings.create(input=[text], model=EMBEDDING_MODEL)
     return np.array(response.data[0].embedding, dtype=np.float32)
 
 # 🧩 Chunk metni
-
 def chunk_text(text: str, chunk_size: int = 500):
     words = text.split()
     return [" ".join(words[i:i+chunk_size]) for i in range(0, len(words), chunk_size)]
 
 # 💾 Milvus'a veri ekle
-
 def add_to_milvus(user_id: str, doc_id: str, text: str, api_key: str):
     create_collection()
     collection = Collection(name=COLLECTION_NAME)
@@ -91,7 +87,6 @@ def add_to_milvus(user_id: str, doc_id: str, text: str, api_key: str):
     collection.flush()
 
 # 🔍 Arama yap
-
 def search_milvus(query: str, user_id: str, api_key: str, top_k: int = 5):
     create_collection()
     collection = Collection(name=COLLECTION_NAME)
@@ -110,9 +105,7 @@ def search_milvus(query: str, user_id: str, api_key: str, top_k: int = 5):
     hits = results[0]
     return [(hit.entity.get("doc_id"), hit.entity.get("chunk"), hit.distance) for hit in hits]
 
-# 🔍 Belirli bir kullanıcıya ait başlıkları gruplayarak getir
-from typing import List
-
+# 📋 Kullanıcının başlıklarını listeler
 def list_titles(user_id: str, session_user_id: str) -> List[str]:
     """Sadece kullanıcı kendi verilerini görebilir. Chunk başlıklarını gruplayarak döndürür."""
     if user_id != session_user_id:
