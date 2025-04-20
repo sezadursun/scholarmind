@@ -249,8 +249,6 @@ with tab6:
     streamlit_memory_qa_tab(api_key)
 
 # 📌 PDF'yi Milvus Hafızasına Ekle Sekmesi
-
-# 📌 PDF'yi Milvus Hafızasına Ekle Sekmesi
 with tab7:
     st.subheader("📌 PDF'yi Milvus Hafızasına Ekle")
 
@@ -271,14 +269,17 @@ with tab7:
                     # 🔥 PDF uzunluğunu kontrol et ve böl
                     words = full_text.split()
                     chunk_size = 500  # yaklaşık 500 kelimelik parçalar
+                    base_doc_id = uploaded_file.name.replace(".pdf", "")
+
                     for i in range(0, len(words), chunk_size):
                         chunk = " ".join(words[i:i+chunk_size])
-                        title = f"{uploaded_file.name.replace('.pdf', '')}_chunk_{i//chunk_size + 1}"
-                        add_to_milvus(user_id=user_id, title=title, text=chunk, api_key=api_key)
+                        chunked_doc_id = f"{base_doc_id}_chunk_{i//chunk_size + 1}"
+                        add_to_milvus(user_id=user_id, doc_id=chunked_doc_id, text=chunk, api_key=api_key)
 
                     st.success("✅ PDF içeriği parçalara ayrıldı ve Milvus'a başarıyla eklendi!")
             except Exception as e:
                 st.error(f"Hata oluştu: {str(e)}")
+
 
 # 📂 Başlıkları Gör Sekmesi
 with tab8:
