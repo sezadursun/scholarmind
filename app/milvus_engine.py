@@ -1,4 +1,4 @@
-from pymilvus import connections, FieldSchema, CollectionSchema, DataType, Collection
+from pymilvus import connections, FieldSchema, CollectionSchema, DataType, Collection, utility
 from openai import OpenAI
 import numpy as np
 import uuid
@@ -19,7 +19,7 @@ EMBEDDING_MODEL = "text-embedding-ada-002"
 
 # 📄 Koleksiyon oluşturma
 def create_collection():
-    if COLLECTION_NAME in list_collections():
+    if COLLECTION_NAME in utility.list_collections():
         return
     fields = [
         FieldSchema(name="id", dtype=DataType.VARCHAR, is_primary=True, auto_id=False, max_length=64),
