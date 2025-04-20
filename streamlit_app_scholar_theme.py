@@ -8,33 +8,50 @@ st.set_page_config(
     layout="wide"
 )
 
-st.markdown("""
+st.markdown(
+    """
     <style>
-        body {
-            background-color: #FAF9F6;
-            font-family: 'Inter', sans-serif;
-        }
-        .block-container {
-            padding-top: 2rem;
-        }
-        h1 {
-            color: #4B3F72;
-        }
-        .stTabs [data-baseweb="tab"] {
-            background-color: #C8CCD4;
-            color: black;
-        }
-        .stTabs [aria-selected="true"] {
-            background-color: #4B3F72;
-            color: white;
-        }
-        .stButton>button {
-            background-color: #3766E8;
-            color: white;
-            border-radius: 5px;
-        }
+    .stTabs [data-baseweb="tab-list"] {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: 0.4rem;
+    }
+
+    .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {
+        display: none;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        background-color: #F0F0F0;
+        color: #333;
+        padding: 0.6rem 1rem;
+        border-radius: 10px;
+        border: 1px solid #d0d0d0;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .stTabs [aria-selected="true"] {
+        background-color: #4B3F72 !important;
+        color: white !important;
+        border: 2px solid #4B3F72;
+        box-shadow: inset 0 -4px 0 #F44336;
+    }
+
+    .stTabs [data-baseweb="tab"]:hover {
+        background-color: #E0E0E0;
+        cursor: pointer;
+    }
     </style>
-""", unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True
+)
+
 
 st.title("🧠 ScholarMind")
 st.caption("Bilge araştırma hafızanız. Arayın, özetleyin, hatırlayın.")
