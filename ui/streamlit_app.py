@@ -97,9 +97,10 @@ st.title(":brain: ScholarMind")
 st.caption("Bilge araştırma hafızanız. Arayın, özetleyin, hatırlayın.")
 
 TAB_LABELS = [
-    "🔍 Ara", "⏪ Geçmiş", "🥚 ArXiv", "📖 Soru Sor", "🧠 Hafızadan Sor", "🧾 PDF ➕ Hafıza"
+    "🔍 Ara", "⏪ Geçmiş", "🥚 ArXiv", "📖 Soru Sor", "🧠 Hafızadan Sor", "🧾 PDF ➕ Hafıza", "📂 Başlıkları Gör"
 ]
-tab1, tab3, tab4, tab5, tab6, tab7 = st.tabs(TAB_LABELS)
+tab1, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(TAB_LABELS)
+
 
 # 🔍 Makale Arama
 with tab1:
@@ -278,4 +279,23 @@ with tab7:
             except Exception as e:
                 st.error(f"Hata oluştu: {str(e)}")
 
+# 🔎 Kayıtlı başlıkları listeleme sekmesi (isteğe bağlı bir tab ya da sidebar bölümüne eklenebilir)
+
+st.subheader("📚 Kayıtlı Başlıklarınızı Görüntüleyin")
+
+current_user_id = st.text_input("👤 Kullanıcı ID (başlıkları görmek için):", value="demo-user")
+
+if st.button("📂 Başlıkları Göster") and current_user_id:
+    try:
+        titles = list_titles(user_id=current_user_id, session_user_id=current_user_id)
+        if titles:
+            st.success(f"✅ {len(titles)} başlık bulundu:")
+            for title in titles:
+                st.markdown(f"- 📄 **{title}**")
+        else:
+            st.info("🔍 Henüz eklenmiş bir başlık bulunamadı.")
+    except PermissionError as e:
+        st.error(f"🚫 Yetkisiz erişim: {str(e)}")
+    except Exception as e:
+        st.error(f"⚠️ Bir hata oluştu: {str(e)}")
 
