@@ -30,8 +30,8 @@ def create_collection():
     schema = CollectionSchema(fields, description="Research memory by user")
     collection = Collection(name=COLLECTION_NAME, schema=schema)
     collection.create()
-    
-    # 🔍 Vektör alanı için index oluştur
+
+    # 🔍 Arama yapılabilmesi için embedding alanına index oluştur
     collection.create_index(
         field_name="embedding",
         index_params={"metric_type": "L2", "index_type": "IVF_FLAT", "params": {"nlist": 1024}}
