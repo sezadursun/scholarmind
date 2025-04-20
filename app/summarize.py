@@ -1,10 +1,12 @@
 from openai import OpenAI
 from typing import List, Dict
 from app.prompts import SYSTEM_MESSAGE, SUMMARY_PROMPT_TEMPLATE
+from app.model_selector import get_model  # ⬅️ Model seçici fonksiyon
 
 def summarize_paper(paper: Dict, api_key: str) -> str:
     """GPT ile bir makalenin kısa özetini oluşturur."""
     client = OpenAI(api_key=api_key)
+    model = get_model("short_summary")  # ⬅️ Dinamik model seçimi
 
     title = paper.get("title", "")
     abstract = paper.get("abstract", "")
@@ -12,7 +14,7 @@ def summarize_paper(paper: Dict, api_key: str) -> str:
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model=model,
             messages=[
                 {"role": "system", "content": SYSTEM_MESSAGE},
                 {"role": "user", "content": prompt}
@@ -36,6 +38,7 @@ def summarize_papers(papers: List[Dict], api_key: str) -> List[Dict]:
 def summarize_fulltext(full_text: str, api_key: str) -> str:
     """PDF gibi tam metin içerikleri akademik olarak özetler."""
     client = OpenAI(api_key=api_key)
+    model = get_model("detailed_summary")  # ⬅️ Uzun özet için model
 
     max_chunk = full_text[:4000]  # LLM token sınırı güvenliği için
     prompt = f"""
@@ -49,7 +52,7 @@ Tam Metin:
 """
     try:
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model=model,
             messages=[
                 {"role": "system", "content": SYSTEM_MESSAGE},
                 {"role": "user", "content": prompt}
