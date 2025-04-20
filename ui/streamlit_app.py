@@ -248,6 +248,7 @@ with tab6:
 
 # 📌 PDF'yi Milvus Hafızasına Ekle Sekmesi
 
+# 📌 PDF'yi Milvus Hafızasına Ekle Sekmesi
 with tab7:
     st.subheader("📌 PDF'yi Milvus Hafızasına Ekle")
 
@@ -276,4 +277,5 @@ with tab7:
                     st.success("✅ PDF içeriği parçalara ayrıldı ve Milvus'a başarıyla eklendi!")
             except Exception as e:
                 st.error(f"Hata oluştu: {str(e)}")
+
 
