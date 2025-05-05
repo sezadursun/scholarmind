@@ -41,10 +41,18 @@ def search_similar(text: str, top_k=3, api_key: str = ""):
     D, I = faiss_index.search(np.array([vec]), top_k)
     return [stored_chunks[i] for i in I[0]]
 
-def suggest_topics_based_on_text(text: str, api_key: str = "", top_k=3):
-    """Kısa konular önerisi yapar."""
-    similar_chunks = search_similar(text, top_k=top_k, api_key=api_key)
-    combined = " ".join(chunk for chunk, _ in similar_chunks)
+def suggest_topics_based_on_text(text, api_key: str, model="gpt-4o"):
+    client = OpenAI(api_key=api_key)
+    prompt = f"Bu metne göre 5 akademik araştırma konusu öner: {text}"
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": "Sen akademik bir konu uzmanısın."},
+            {"role": "user", "content": prompt},
+        ],
+    )
+    return response.choices[0].message.content.strip().split("\n")
+
 
     prompt = f"""
 Aşağıdaki akademik içeriklere benzer 3 araştırma konusu öner:
