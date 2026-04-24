@@ -9,4 +9,4 @@ pymilvus
 python-dotenv
 chromadb==0.4.22
 feedparser
-
+torchvision
