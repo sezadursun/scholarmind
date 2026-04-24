@@ -124,12 +124,12 @@ with tab1:
             st.success(f"{len(papers)} makale bulundu.")
 
         for idx, paper in enumerate(papers, 1):
-        title = paper.get("title", "Başlık yok")
-        year = paper.get("year", "Yıl bilgisi yok")
-        citation_count = paper.get("citationCount", 0)
-        url = paper.get("url", "#")
+            title = paper.get("title", "Başlık yok")
+            year = paper.get("year", "Yıl bilgisi yok")
+            citation_count = paper.get("citationCount", 0)
+            url = paper.get("url", "#")
 
-        st.markdown(f"## {idx}. {title}")
+            st.markdown(f"## {idx}. {title}")
 
         authors_data = paper.get("authors", [])
 
