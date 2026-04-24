@@ -10,29 +10,30 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from openai import OpenAI
 from app.paper_search import search_papers
-from app.summarize import summarize_paper, summarize_fulltext
+from app.summarize import summarize_paper
 from app.prompts import SYSTEM_MESSAGE
 from app.faiss_engine import add_text_to_index, search_similar, suggest_topics_based_on_text
 from app.chroma import add_to_memory as add_to_chroma_memory, search_memory
 from app.arxiv import search_arxiv
 from app.rag_qa_engine import build_index_from_text, answer_with_context
 from app.rag_milvus import streamlit_memory_qa_tab
-from app.milvus_engine import add_to_milvus
-from app.milvus_engine import list_titles
+from app.milvus_engine import add_to_milvus, list_titles
 from PyPDF2 import PdfReader
 
 # 🔐 API Key
 st.sidebar.markdown("## 🔐 OpenAI API Key")
 api_key = st.sidebar.text_input("Enter your OpenAI API Key", type="password")
+
 if not api_key:
     st.warning("Please enter your OpenAI API Key in the sidebar to continue.")
     st.stop()
+
+client = OpenAI(api_key=api_key)
 
 # ✅ GPT-4o MODEL TESTİ
 with st.sidebar.expander("🤖 GPT-4o Erişim Testi"):
     if st.button("GPT-4o Erişimini Test Et"):
         try:
-            client = OpenAI(api_key=api_key)
             response = client.chat.completions.create(
                 model="gpt-4o",
                 messages=[{"role": "user", "content": "Sadece çalıştığını kanıtla"}],
@@ -48,7 +49,6 @@ with st.sidebar.expander("🤖 GPT-4o Erişim Testi"):
                 st.error(f"⚠️ Bilinmeyen hata: {str(e)}")
 
 # 🧠 ScholarMind
-
 st.markdown(
     """
     <style>
@@ -93,15 +93,20 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-
 st.title(":brain: ScholarMind")
 st.caption("Bilge araştırma hafızanız. Arayın, özetleyin, hatırlayın.")
 
 TAB_LABELS = [
-    "🔍 Ara", "⏪ Geçmiş", "🥚 ArXiv", "📖 Soru Sor", "🧠 Hafızadan Sor", "🧾 PDF ➕ Hafıza", "📂 Başlıkları Gör"
+    "🔍 Ara",
+    "⏪ Geçmiş",
+    "🥚 ArXiv",
+    "📖 Soru Sor",
+    "🧠 Hafızadan Sor",
+    "🧾 PDF ➕ Hafıza",
+    "📂 Başlıkları Gör"
 ]
-tab1, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(TAB_LABELS)
 
+tab1, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(TAB_LABELS)
 
 # 🔍 Makale Arama
 with tab1:
@@ -123,64 +128,83 @@ with tab1:
         else:
             st.success(f"{len(papers)} makale bulundu.")
 
-        for idx, paper in enumerate(papers, 1):
-            title = paper.get("title", "Başlık yok")
-            year = paper.get("year", "Yıl bilgisi yok")
-            citation_count = paper.get("citationCount", 0)
-            url = paper.get("url", "#")
+            for idx, paper in enumerate(papers, 1):
+                title = paper.get("title", "Başlık yok")
+                abstract = paper.get("abstract", "")
+                paper_year = paper.get("year", "Yıl bilgisi yok")
+                citation_count = paper.get("citationCount", 0)
+                url = paper.get("url", "#")
 
-            st.markdown(f"## {idx}. {title}")
+                st.markdown(f"## {idx}. {title}")
 
-        authors_data = paper.get("authors", [])
+                authors_data = paper.get("authors", [])
 
-        if isinstance(authors_data, list):
-            authors = ", ".join([
-                a.get("name", "Bilinmeyen Yazar")
-                for a in authors_data
-                if isinstance(a, dict)
-            ])
-        elif isinstance(authors_data, str):
-            authors = authors_data
-        else:
-            authors = "Yazar bilgisi yok"
+                if isinstance(authors_data, list):
+                    authors = ", ".join([
+                        a.get("name", "Bilinmeyen Yazar")
+                        for a in authors_data
+                        if isinstance(a, dict)
+                    ])
+                elif isinstance(authors_data, str):
+                    authors = authors_data
+                else:
+                    authors = "Yazar bilgisi yok"
 
-        st.markdown(
-            f"**Yazarlar:** {authors}  \n"
-            f"**Yıl:** {year}  \n"
-            f"**Alıntı:** {citation_count}"
-        )
-        st.markdown(f"🔗 [Orijinal Makale]({url})")
+                st.markdown(
+                    f"**Yazarlar:** {authors}  \n"
+                    f"**Yıl:** {paper_year}  \n"
+                    f"**Alıntı:** {citation_count}"
+                )
+
+                if url and url != "#":
+                    st.markdown(f"🔗 [Orijinal Makale]({url})")
 
                 with st.spinner("Kısa özet hazırlanıyor..."):
                     try:
-                        short_summary = summarize_paper({
-                            "title": paper["title"],
-                            "abstract": paper["abstract"]
-                        }, api_key)
+                        short_summary = summarize_paper(
+                            {
+                                "title": title,
+                                "abstract": abstract
+                            },
+                            api_key
+                        )
                         st.success(f"**Kısa Özet:** {short_summary}")
                     except Exception as e:
+                        short_summary = ""
                         st.error(f"⚠️ Özetleme hatası: {str(e)}")
 
-                combined_text = f"{paper['title']} - {short_summary}"
-                add_text_to_index(combined_text, source_id=paper['title'], api_key=api_key)
-                add_to_chroma_memory(
-                    id=f"{paper['title']}_{idx}",
-                    content=combined_text,
-                    metadata={"source": "SemanticScholar", "title": paper['title']}
-                )
+                combined_text = f"{title} - {short_summary}"
+
+                try:
+                    add_text_to_index(
+                        combined_text,
+                        source_id=title,
+                        api_key=api_key
+                    )
+
+                    add_to_chroma_memory(
+                        id=f"{title}_{idx}",
+                        content=combined_text,
+                        metadata={
+                            "source": "SemanticScholar",
+                            "title": title
+                        }
+                    )
+                except Exception as e:
+                    st.warning(f"⚠️ Hafızaya ekleme sırasında hata: {str(e)}")
 
                 with st.expander("📜 Detaylı Özet (isteğe bağlı açılır)"):
                     with st.spinner("Detaylı özet hazırlanıyor..."):
                         detailed_prompt = f"""
-Makale başlığı: {paper['title']}
+Makale başlığı: {title}
 
-Özeti: {paper['abstract']}
+Özeti: {abstract}
 
 Bu makaleyi aşağıdaki başlıklar altında detaylıca analiz et:
 
-1. Problem tanımı  
-2. Kullanılan yöntem ve veri  
-3. Sonuçlar ve katkılar  
+1. Problem tanımı
+2. Kullanılan yöntem ve veri
+3. Sonuçlar ve katkılar
 4. Bu çalışmanın önem düzeyi
 
 Hepsini sade ve akademik bir dille açıkla (6-10 cümle arası).
@@ -198,14 +222,23 @@ Hepsini sade ve akademik bir dille açıkla (6-10 cümle arası).
                             st.error(f"GPT-4o hata: {str(e)}")
 
                 st.markdown("### 🔍 Benzer Makaleler")
-                similar = search_similar(combined_text, top_k=3, api_key=api_key)
-                for sim_idx, (chunk, src) in enumerate(similar, 1):
-                    st.markdown(f"**{sim_idx}. ({src})**")
-                    st.write(f"_{chunk[:300]}..._")
+
+                try:
+                    similar = search_similar(combined_text, top_k=3, api_key=api_key)
+
+                    for sim_idx, (chunk, src) in enumerate(similar, 1):
+                        st.markdown(f"**{sim_idx}. ({src})**")
+                        st.write(f"_{chunk[:300]}..._")
+                except Exception as e:
+                    st.warning(f"⚠️ Benzer makale arama hatası: {str(e)}")
 
                 st.markdown("### 💡 Yeni Araştırma Konu Önerileri")
-                topics = suggest_topics_based_on_text(combined_text, api_key=api_key)
-                st.success(topics)
+
+                try:
+                    topics = suggest_topics_based_on_text(combined_text, api_key=api_key)
+                    st.success(topics)
+                except Exception as e:
+                    st.warning(f"⚠️ Konu önerisi hatası: {str(e)}")
 
                 st.markdown("---")
 
@@ -213,12 +246,20 @@ Hepsini sade ve akademik bir dille açıkla (6-10 cümle arası).
 with tab3:
     st.subheader("🔁 Daha Önce Eklediğiniz Araştırmalar")
     search_term = st.text_input("📅 Geçmişte aradığınız bir konuyu yazın:")
+
     if search_term:
         with st.spinner("Geçmiş taranıyor..."):
-            results = search_memory(search_term)
-            for i, (doc, meta) in enumerate(zip(results["documents"][0], results["metadatas"][0])):
-                st.markdown(f"**{i+1}. {meta.get('source', 'Kaynak Yok')}**")
-                st.info(doc[:500] + "...")
+            try:
+                results = search_memory(search_term)
+
+                documents = results.get("documents", [[]])[0]
+                metadatas = results.get("metadatas", [[]])[0]
+
+                for i, (doc, meta) in enumerate(zip(documents, metadatas)):
+                    st.markdown(f"**{i + 1}. {meta.get('source', 'Kaynak Yok')}**")
+                    st.info(doc[:500] + "...")
+            except Exception as e:
+                st.error(f"Geçmiş arama hatası: {str(e)}")
 
 # 🧪 ArXiv Sekmesi
 with tab4:
@@ -228,17 +269,25 @@ with tab4:
 
     if st.button("ArXiv'te Ara"):
         with st.spinner("arXiv API'den sonuçlar getiriliyor..."):
-            arxiv_papers = search_arxiv(arxiv_query, max_results=max_results)
+            try:
+                arxiv_papers = search_arxiv(arxiv_query, max_results=max_results)
+            except Exception as e:
+                st.error(f"ArXiv API hatası: {str(e)}")
+                arxiv_papers = []
 
         if not arxiv_papers:
             st.warning("Hiçbir preprint bulunamadı.")
         else:
             for i, paper in enumerate(arxiv_papers, 1):
-                st.markdown(f"### {i}. {paper['title']}")
-                st.markdown(f"**Yazarlar:** {paper['authors']}")
-                st.markdown(f"**Yayın Tarihi:** {paper['published']}")
-                st.write(f"**Özet:** {paper['summary'][:500]}...")
-                st.markdown(f"[🔗 ArXiv Linki]({paper['link']})")
+                st.markdown(f"### {i}. {paper.get('title', 'Başlık yok')}")
+                st.markdown(f"**Yazarlar:** {paper.get('authors', 'Yazar bilgisi yok')}")
+                st.markdown(f"**Yayın Tarihi:** {paper.get('published', 'Tarih yok')}")
+                st.write(f"**Özet:** {paper.get('summary', '')[:500]}...")
+
+                link = paper.get("link", "#")
+                if link and link != "#":
+                    st.markdown(f"[🔗 ArXiv Linki]({link})")
+
                 st.markdown("---")
 
 # 📖 Makale Q&A Sekmesi
@@ -253,6 +302,7 @@ with tab5:
             try:
                 pdf_reader = PdfReader(uploaded_file)
                 full_text = ""
+
                 for page in pdf_reader.pages:
                     full_text += page.extract_text() or ""
 
@@ -260,10 +310,12 @@ with tab5:
                     st.warning("Bu PDF'den yeterince metin çıkarılamadı.")
                 else:
                     build_index_from_text(full_text)
+
                     with st.spinner("Yanıt oluşturuluyor..."):
                         answer = answer_with_context(question, api_key)
                         st.success("✅ Yanıt:")
                         st.write(answer)
+
             except Exception as e:
                 st.error(f"Hata oluştu: {str(e)}")
 
@@ -283,26 +335,32 @@ with tab7:
             try:
                 pdf_reader = PdfReader(uploaded_file)
                 full_text = ""
+
                 for page in pdf_reader.pages:
                     full_text += page.extract_text() or ""
 
                 if len(full_text.strip()) < 100:
                     st.warning("Bu PDF'den yeterince metin çıkarılamadı.")
                 else:
-                    # 🔥 PDF uzunluğunu kontrol et ve böl
                     words = full_text.split()
-                    chunk_size = 500  # yaklaşık 500 kelimelik parçalar
+                    chunk_size = 500
                     base_doc_id = uploaded_file.name.replace(".pdf", "")
 
                     for i in range(0, len(words), chunk_size):
-                        chunk = " ".join(words[i:i+chunk_size])
-                        chunked_doc_id = f"{base_doc_id}_chunk_{i//chunk_size + 1}"
-                        add_to_milvus(user_id=user_id, doc_id=chunked_doc_id, text=chunk, api_key=api_key)
+                        chunk = " ".join(words[i:i + chunk_size])
+                        chunked_doc_id = f"{base_doc_id}_chunk_{i // chunk_size + 1}"
+
+                        add_to_milvus(
+                            user_id=user_id,
+                            doc_id=chunked_doc_id,
+                            text=chunk,
+                            api_key=api_key
+                        )
 
                     st.success("✅ PDF içeriği parçalara ayrıldı ve Milvus'a başarıyla eklendi!")
+
             except Exception as e:
                 st.error(f"Hata oluştu: {str(e)}")
-
 
 # 📂 Başlıkları Gör Sekmesi
 with tab8:
@@ -312,13 +370,19 @@ with tab8:
 
     if st.button("📂 Başlıkları Göster"):
         try:
-            titles = list_titles(user_id=current_user_id, session_user_id=current_user_id)
+            titles = list_titles(
+                user_id=current_user_id,
+                session_user_id=current_user_id
+            )
+
             if titles:
                 st.success(f"✅ {len(titles)} başlık bulundu:")
+
                 for title in titles:
                     st.markdown(f"- 📄 **{title}**")
             else:
                 st.info("🔍 Henüz eklenmiş bir başlık bulunamadı.")
+
         except PermissionError as e:
             st.error(f"🚫 Yetkisiz erişim: {str(e)}")
         except Exception as e:
