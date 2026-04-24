@@ -1,4 +1,5 @@
 # app/paper_search.py
+
 import time
 import requests
 from typing import Any, Dict, List, Optional
@@ -15,23 +16,13 @@ def search_papers(
     timeout: int = 20,
     api_key: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """
-    Search papers from Semantic Scholar.
 
-    Args:
-        query: Search query string.
-        year: Minimum publication year filter. If None, no year filter is applied.
-        limit: Number of results to return.
-        retries: Number of retry attempts for rate limit / temporary failures.
-        timeout: Request timeout in seconds.
-        api_key: Optional Semantic Scholar API key.
-
-    Returns:
-        A normalized list of paper dictionaries.
-    """
     headers = {}
+
+    # Semantic Scholar API key varsa böyle gönderilir.
+    # OpenAI API key buraya verilmemeli.
     if api_key:
-        headers["7rEDZUDjtI1rUp3c5iZNy7GtFqPWXerD82Kg2ryy"] = api_key
+        headers["x-api-key"] = api_key
 
     params = {
         "query": query,
@@ -39,8 +30,9 @@ def search_papers(
         "fields": DEFAULT_FIELDS,
     }
 
+    # Semantic Scholar year filtresi
     if year is not None:
-        params["filter"] = f"year>{year}"
+        params["year"] = f"{year}-"
 
     for attempt in range(retries):
         try:
@@ -55,15 +47,9 @@ def search_papers(
                 data = response.json().get("data", [])
                 return [_normalize_paper(paper) for paper in data]
 
-            if response.status_code == 429:
+            if response.status_code in [429, 500, 502, 503, 504]:
                 wait_time = 2 ** attempt
-                print(f"⏳ Rate limited by Semantic Scholar. Retrying in {wait_time} seconds...")
-                time.sleep(wait_time)
-                continue
-
-            if 500 <= response.status_code < 600:
-                wait_time = 2 ** attempt
-                print(f"⚠️ Server error {response.status_code}. Retrying in {wait_time} seconds...")
+                print(f"⚠️ Semantic Scholar geçici hata {response.status_code}. {wait_time} sn sonra tekrar deneniyor...")
                 time.sleep(wait_time)
                 continue
 
@@ -72,21 +58,20 @@ def search_papers(
 
         except requests.RequestException as e:
             wait_time = 2 ** attempt
-            print(f"❌ Request failed: {e}. Retrying in {wait_time} seconds...")
+            print(f"❌ Request failed: {e}. {wait_time} sn sonra tekrar deneniyor...")
             time.sleep(wait_time)
 
     return []
 
 
 def _normalize_paper(paper: Dict[str, Any]) -> Dict[str, Any]:
-    """Normalize Semantic Scholar paper response into a consistent structure."""
     return {
         "paper_id": paper.get("paperId"),
-        "title": paper.get("title"),
-        "abstract": paper.get("abstract"),
-        "authors": [author.get("name") for author in paper.get("authors", []) if author.get("name")],
-        "year": paper.get("year"),
-        "citations": paper.get("citationCount"),
-        "url": paper.get("url"),
+        "title": paper.get("title") or "Başlık yok",
+        "abstract": paper.get("abstract") or "Özet bulunamadı.",
+        "authors": paper.get("authors") or [],
+        "year": paper.get("year") or "Yıl bilgisi yok",
+        "citationCount": paper.get("citationCount") or 0,
+        "url": paper.get("url") or "#",
         "source": "semantic_scholar",
     }
