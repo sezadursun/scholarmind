@@ -123,28 +123,28 @@ with tab1:
         else:
             st.success(f"{len(papers)} makale bulundu.")
             for idx, paper in enumerate(papers, 1):
-title = paper.get("title", "Başlık yok")
-year = paper.get("year", "Yıl bilgisi yok")
-citation_count = paper.get("citationCount", 0)
-url = paper.get("url", "#")
+            title = paper.get("title", "Başlık yok")
+            year = paper.get("year", "Yıl bilgisi yok")
+            citation_count = paper.get("citationCount", 0)
+            url = paper.get("url", "#")
 
-st.markdown(f"## {idx}. {title}")
+            st.markdown(f"## {idx}. {title}")
 
-authors_data = paper.get("authors", [])
+            authors_data = paper.get("authors", [])
 
-if isinstance(authors_data, list):
-    authors = ", ".join([
-        a.get("name", "Bilinmeyen Yazar")
-        for a in authors_data
-        if isinstance(a, dict)
-    ])
-elif isinstance(authors_data, str):
-    authors = authors_data
-else:
-    authors = "Yazar bilgisi yok"
+            if isinstance(authors_data, list):
+                authors = ", ".join([
+                    a.get("name", "Bilinmeyen Yazar")
+                    for a in authors_data
+                    if isinstance(a, dict)
+                ])
+            elif isinstance(authors_data, str):
+                authors = authors_data
+            else:
+                authors = "Yazar bilgisi yok"
 
-st.markdown(f"**Yazarlar:** {authors}  \n**Yıl:** {year}  \n**Alıntı:** {citation_count}")
-st.markdown(f"🔗 [Orijinal Makale]({url})")
+            st.markdown(f"**Yazarlar:** {authors}  \n**Yıl:** {year}  \n**Alıntı:** {citation_count}")
+            st.markdown(f"🔗 [Orijinal Makale]({url})")
 
                 with st.spinner("Kısa özet hazırlanıyor..."):
                     try:
