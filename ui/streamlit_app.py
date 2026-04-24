@@ -122,11 +122,8 @@ with tab1:
             st.warning("❗ Aradığınız konuda sonuç bulunamadı.")
         else:
             st.success(f"{len(papers)} makale bulundu.")
-            for idx, paper in enumerate(papers, 1):
-            else:
-    st.success(f"{len(papers)} makale bulundu.")
 
-    for idx, paper in enumerate(papers, 1):
+        for idx, paper in enumerate(papers, 1):
         title = paper.get("title", "Başlık yok")
         year = paper.get("year", "Yıl bilgisi yok")
         citation_count = paper.get("citationCount", 0)
