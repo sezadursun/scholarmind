@@ -111,7 +111,7 @@ tab1, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(TAB_LABELS)
 # 🔍 Makale Arama
 with tab1:
     query = st.text_input("🔍 Konu:", "transformer visual recognition")
-    year = st.slider("📅 Minimum Yayın Yılı", 2000, 2024, 2020)
+    year = st.slider("📅 Minimum Yayın Yılı", 2000, 2026, 2020)
     limit = st.selectbox("📄 Kaç makale getirilsin?", [3, 5, 7, 10], index=1)
     run = st.button("Ara ve Özetle")
 
