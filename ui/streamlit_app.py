@@ -1,14 +1,21 @@
-import os
+from pathlib import Path
+
+code = r'''import os
 os.environ["STREAMLIT_SERVER_FILE_WATCHER_TYPE"] = "none"
 
+import sys
 import streamlit as st
+from openai import OpenAI
+from PyPDF2 import PdfReader
+
+# Path ayarı
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+# UI tema
 from scholarmind_ui_theme import apply_scholarmind_theme
 apply_scholarmind_theme()
 
-import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from openai import OpenAI
+# App modülleri
 from app.paper_search import search_papers
 from app.summarize import summarize_paper
 from app.prompts import SYSTEM_MESSAGE
@@ -17,9 +24,8 @@ from app.chroma import add_to_memory as add_to_chroma_memory, search_memory
 from app.arxiv import search_arxiv
 from app.rag_qa_engine import build_index_from_text, answer_with_context
 from app.rag_milvus import streamlit_memory_qa_tab
-from app.milvus_engine import add_to_milvus, list_titles
-from PyPDF2 import PdfReader
-from app.milvus_engine import list_titles, clear_user_memory
+from app.milvus_engine import add_to_milvus, list_titles, clear_user_memory
+
 
 # 🔐 API Key
 st.sidebar.markdown("## 🔐 OpenAI API Key")
@@ -30,6 +36,7 @@ if not api_key:
     st.stop()
 
 client = OpenAI(api_key=api_key)
+
 
 # ✅ GPT-4o MODEL TESTİ
 with st.sidebar.expander("🤖 GPT-4o Erişim Testi"):
@@ -42,14 +49,18 @@ with st.sidebar.expander("🤖 GPT-4o Erişim Testi"):
             )
             st.success("✅ GPT-4o modeline erişiminiz var!")
         except Exception as e:
-            if "Incorrect API key" in str(e) or "401" in str(e):
+            err = str(e)
+            if "Incorrect API key" in err or "401" in err:
                 st.error("❌ API anahtarınız geçersiz olabilir.")
-            elif "model" in str(e) and "not found" in str(e):
+            elif "insufficient_quota" in err or "429" in err:
+                st.error("⚠️ API kotanız / billing limitiniz dolmuş görünüyor.")
+            elif "model" in err and "not found" in err:
                 st.error("🚫 GPT-4o modeline erişiminiz yok.")
             else:
-                st.error(f"⚠️ Bilinmeyen hata: {str(e)}")
+                st.error(f"⚠️ Bilinmeyen hata: {err}")
 
-# 🧠 ScholarMind
+
+# 🧠 ScholarMind tab stilleri
 st.markdown(
     """
     <style>
@@ -108,6 +119,7 @@ TAB_LABELS = [
 ]
 
 tab1, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(TAB_LABELS)
+
 
 # 🔍 Makale Arama
 with tab1:
@@ -243,6 +255,7 @@ Hepsini sade ve akademik bir dille açıkla (6-10 cümle arası).
 
                 st.markdown("---")
 
+
 # 🔁 Geçmiş Araştırmalarım
 with tab3:
     st.subheader("🔁 Daha Önce Eklediğiniz Araştırmalar")
@@ -261,6 +274,7 @@ with tab3:
                     st.info(doc[:500] + "...")
             except Exception as e:
                 st.error(f"Geçmiş arama hatası: {str(e)}")
+
 
 # 🧪 ArXiv Sekmesi
 with tab4:
@@ -291,6 +305,7 @@ with tab4:
 
                 st.markdown("---")
 
+
 # 📖 Makale Q&A Sekmesi
 with tab5:
     st.subheader("📖 Yüklediğiniz makaleye soru sorun")
@@ -320,15 +335,17 @@ with tab5:
             except Exception as e:
                 st.error(f"Hata oluştu: {str(e)}")
 
+
 # 🧠 Hafızaya Dayalı Soru Sekmesi
 with tab6:
     streamlit_memory_qa_tab(api_key)
+
 
 # 📌 PDF'yi Milvus Hafızasına Ekle Sekmesi
 with tab7:
     st.subheader("📌 PDF'yi Milvus Hafızasına Ekle")
 
-    user_id = st.text_input("👤 Kullanıcı ID:", value="demo-user")
+    user_id = st.text_input("👤 Kullanıcı ID:", value="demo-user", key="milvus_add_user_id")
     uploaded_file = st.file_uploader("📎 PDF yükleyin", type=["pdf"], key="milvus_pdf")
 
     if uploaded_file and user_id and st.button("💾 Hafızaya Kaydet"):
@@ -343,31 +360,30 @@ with tab7:
                 if len(full_text.strip()) < 100:
                     st.warning("Bu PDF'den yeterince metin çıkarılamadı.")
                 else:
-                    words = full_text.split()
-                    chunk_size = 500
                     base_doc_id = uploaded_file.name.replace(".pdf", "")
 
-                    for i in range(0, len(words), chunk_size):
-                        chunk = " ".join(words[i:i + chunk_size])
-                        chunked_doc_id = f"{base_doc_id}_chunk_{i // chunk_size + 1}"
+                    add_to_milvus(
+                        user_id=user_id,
+                        doc_id=base_doc_id,
+                        text=full_text,
+                        api_key=api_key
+                    )
 
-                        add_to_milvus(
-                            user_id=user_id,
-                            doc_id=chunked_doc_id,
-                            text=chunk,
-                            api_key=api_key
-                        )
-
-                    st.success("✅ PDF içeriği parçalara ayrıldı ve Milvus'a başarıyla eklendi!")
+                    st.success("✅ PDF içeriği Milvus'a başarıyla eklendi!")
 
             except Exception as e:
                 st.error(f"Hata oluştu: {str(e)}")
 
-# 📂 Başlıkları Gör Sekmesi
+
+# 📂 Başlıkları Gör + Hafıza Temizleme Sekmesi
 with tab8:
     st.subheader("📚 Kayıtlı Başlıklarınızı Görüntüleyin")
 
-    current_user_id = st.text_input("👤 Kullanıcı ID (başlıkları görmek için):", value="demo-user")
+    current_user_id = st.text_input(
+        "👤 Kullanıcı ID (başlıkları görmek / silmek için):",
+        value="demo-user",
+        key="milvus_titles_user_id"
+    )
 
     if st.button("📂 Başlıkları Göster"):
         try:
@@ -389,4 +405,28 @@ with tab8:
         except Exception as e:
             st.error(f"⚠️ Bir hata oluştu: {str(e)}")
 
+    st.divider()
+    st.markdown("### 🗑 Hafızayı Temizle")
+    st.warning("Bu işlem, yukarıdaki kullanıcı ID'sine ait Milvus hafızasındaki tüm kayıtları siler.")
 
+    confirm_delete = st.checkbox(
+        "Tüm kayıtlı hafızamı silmek istediğimi onaylıyorum.",
+        key="confirm_clear_milvus_memory"
+    )
+
+    if st.button("🗑 Hafızayı Temizle", disabled=not confirm_delete):
+        try:
+            ok = clear_user_memory(current_user_id)
+
+            if ok:
+                st.success(f"✅ `{current_user_id}` kullanıcısına ait hafıza temizlendi.")
+                st.rerun()
+            else:
+                st.error("Hafıza temizlenirken hata oluştu.")
+        except Exception as e:
+            st.error(f"Hafıza temizlenirken hata oluştu: {str(e)}")
+'''
+
+out = Path("/mnt/data/streamlit_app_corrected.py")
+out.write_text(code, encoding="utf-8")
+out.as_posix()
