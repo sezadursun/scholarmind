@@ -140,3 +140,16 @@ def delete_doc_id(user_id: str, doc_id: str) -> bool:
         print(f"Silme işlemi sırasında hata: {str(e)}")
         return False
 
+def clear_user_memory(user_id: str) -> bool:
+    create_collection()
+    collection = Collection(name=COLLECTION_NAME)
+    collection.load()
+
+    try:
+        collection.delete(expr=f"user_id == '{user_id}'")
+        collection.flush()
+        return True
+    except Exception as e:
+        print(f"Hafıza temizleme sırasında hata: {str(e)}")
+        return False
+
