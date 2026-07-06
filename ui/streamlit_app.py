@@ -1,54 +1,94 @@
+"""ScholarMind Streamlit UI.
+
+Place this file at: ui/streamlit_app.py
+"""
+
+from __future__ import annotations
+
 import os
-os.environ["STREAMLIT_SERVER_FILE_WATCHER_TYPE"] = "none"
+import sys
+from pathlib import Path
+
+os.environ.setdefault("STREAMLIT_SERVER_FILE_WATCHER_TYPE", "none")
+
+# Make imports stable both locally and on Streamlit Cloud.
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 import streamlit as st
-from scholarmind_ui_theme import apply_scholarmind_theme
-apply_scholarmind_theme()
-
-import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 from openai import OpenAI
-from app.paper_search import search_papers
-from app.summarize import summarize_paper
-from app.prompts import SYSTEM_MESSAGE
-from app.faiss_engine import add_text_to_index, search_similar, suggest_topics_based_on_text
-from app.chroma import add_to_memory as add_to_chroma_memory, search_memory
-from app.arxiv import search_arxiv
-from app.rag_qa_engine import build_index_from_text, answer_with_context
-from app.rag_milvus import streamlit_memory_qa_tab
-from app.milvus_engine import add_to_milvus, list_titles
 from PyPDF2 import PdfReader
 
-# 🔐 API Key
-st.sidebar.markdown("## 🔐 OpenAI API Key")
-api_key = st.sidebar.text_input("Enter your OpenAI API Key", type="password")
+from scholarmind_ui_theme import apply_scholarmind_theme
+from app.arxiv import search_arxiv
+from app.chroma import add_to_memory as add_to_chroma_memory, search_memory
+from app.faiss_engine import add_text_to_index, search_similar, suggest_topics_based_on_text
+from app.milvus_engine import add_to_milvus, list_titles
+from app.paper_search import search_papers
+from app.prompts import SYSTEM_MESSAGE
+from app.rag_milvus import streamlit_memory_qa_tab
+from app.rag_qa_engine import answer_with_context, build_index_from_text
+from app.summarize import summarize_paper
 
+apply_scholarmind_theme()
+
+
+def get_openai_api_key() -> str:
+    """Read OpenAI API key from sidebar, Streamlit secrets, or environment."""
+    st.sidebar.markdown("## 🔐 OpenAI API Key")
+    typed_key = st.sidebar.text_input("Enter your OpenAI API Key", type="password")
+    if typed_key:
+        return typed_key
+
+    secret_key = st.secrets.get("OPENAI_API_KEY", None)
+    if secret_key:
+        return str(secret_key)
+
+    env_key = os.getenv("OPENAI_API_KEY")
+    if env_key:
+        return env_key
+
+    return ""
+
+
+def extract_pdf_text(uploaded_file) -> str:
+    """Extract readable text from a Streamlit-uploaded PDF."""
+    pdf_reader = PdfReader(uploaded_file)
+    pages = []
+    for page in pdf_reader.pages:
+        pages.append(page.extract_text() or "")
+    return "\n".join(pages).strip()
+
+
+def render_model_test(client: OpenAI) -> None:
+    with st.sidebar.expander("🤖 GPT-4o Erişim Testi"):
+        if st.button("GPT-4o Erişimini Test Et"):
+            try:
+                client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[{"role": "user", "content": "Sadece çalıştığını kanıtla"}],
+                    max_tokens=5,
+                )
+                st.success("✅ GPT-4o modeline erişiminiz var!")
+            except Exception as e:
+                message = str(e)
+                if "Incorrect API key" in message or "401" in message:
+                    st.error("❌ API anahtarınız geçersiz olabilir.")
+                elif "model" in message and "not found" in message:
+                    st.error("🚫 GPT-4o modeline erişiminiz yok.")
+                else:
+                    st.error(f"⚠️ Bilinmeyen hata: {message}")
+
+
+api_key = get_openai_api_key()
 if not api_key:
     st.warning("Please enter your OpenAI API Key in the sidebar to continue.")
     st.stop()
 
 client = OpenAI(api_key=api_key)
+render_model_test(client)
 
-# ✅ GPT-4o MODEL TESTİ
-with st.sidebar.expander("🤖 GPT-4o Erişim Testi"):
-    if st.button("GPT-4o Erişimini Test Et"):
-        try:
-            response = client.chat.completions.create(
-                model="gpt-4o",
-                messages=[{"role": "user", "content": "Sadece çalıştığını kanıtla"}],
-                max_tokens=5
-            )
-            st.success("✅ GPT-4o modeline erişiminiz var!")
-        except Exception as e:
-            if "Incorrect API key" in str(e) or "401" in str(e):
-                st.error("❌ API anahtarınız geçersiz olabilir.")
-            elif "model" in str(e) and "not found" in str(e):
-                st.error("🚫 GPT-4o modeline erişiminiz yok.")
-            else:
-                st.error(f"⚠️ Bilinmeyen hata: {str(e)}")
-
-# 🧠 ScholarMind
 st.markdown(
     """
     <style>
@@ -59,11 +99,7 @@ st.markdown(
         scrollbar-width: none;
         gap: 0.4rem;
     }
-
-    .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {
-        display: none;
-    }
-
+    .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar { display: none; }
     .stTabs [data-baseweb="tab"] {
         background-color: #F0F0F0;
         color: #333;
@@ -76,21 +112,19 @@ st.markdown(
         white-space: nowrap;
         flex-shrink: 0;
     }
-
     .stTabs [aria-selected="true"] {
         background-color: #4B3F72 !important;
         color: white !important;
         border: 2px solid #4B3F72;
         box-shadow: inset 0 -4px 0 #F44336;
     }
-
     .stTabs [data-baseweb="tab"]:hover {
         background-color: #E0E0E0;
         cursor: pointer;
     }
     </style>
     """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
 
 st.title(":brain: ScholarMind")
@@ -103,19 +137,19 @@ TAB_LABELS = [
     "📖 Soru Sor",
     "🧠 Hafızadan Sor",
     "🧾 PDF ➕ Hafıza",
-    "📂 Başlıkları Gör"
+    "📂 Başlıkları Gör",
 ]
 
-tab1, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(TAB_LABELS)
+tab_search, tab_history, tab_arxiv, tab_pdf_qa, tab_memory_qa, tab_pdf_memory, tab_titles = st.tabs(TAB_LABELS)
 
-# 🔍 Makale Arama
-with tab1:
+
+with tab_search:
+    st.subheader("🔍 Akademik Makale Ara")
     query = st.text_input("🔍 Konu:", "transformer visual recognition")
     year = st.slider("📅 Minimum Yayın Yılı", 2000, 2026, 2020)
     limit = st.selectbox("📄 Kaç makale getirilsin?", [3, 5, 7, 10], index=1)
-    run = st.button("Ara ve Özetle")
 
-    if run:
+    if st.button("Ara ve Özetle"):
         with st.spinner("Makaleler aranıyor..."):
             try:
                 papers = search_papers(query=query, year=year, limit=limit)
@@ -128,74 +162,61 @@ with tab1:
         else:
             st.success(f"{len(papers)} makale bulundu.")
 
-            for idx, paper in enumerate(papers, 1):
-                title = paper.get("title", "Başlık yok")
-                abstract = paper.get("abstract", "")
-                paper_year = paper.get("year", "Yıl bilgisi yok")
-                citation_count = paper.get("citationCount", 0)
-                url = paper.get("url", "#")
+        for idx, paper in enumerate(papers, 1):
+            title = paper.get("title", "Başlık yok")
+            abstract = paper.get("abstract", "")
+            paper_year = paper.get("year", "Yıl bilgisi yok")
+            citation_count = paper.get("citationCount", 0)
+            url = paper.get("url", "#")
 
-                st.markdown(f"## {idx}. {title}")
+            st.markdown(f"## {idx}. {title}")
 
-                authors_data = paper.get("authors", [])
-
-                if isinstance(authors_data, list):
-                    authors = ", ".join([
-                        a.get("name", "Bilinmeyen Yazar")
-                        for a in authors_data
-                        if isinstance(a, dict)
-                    ])
-                elif isinstance(authors_data, str):
-                    authors = authors_data
-                else:
-                    authors = "Yazar bilgisi yok"
-
-                st.markdown(
-                    f"**Yazarlar:** {authors}  \n"
-                    f"**Yıl:** {paper_year}  \n"
-                    f"**Alıntı:** {citation_count}"
+            authors_data = paper.get("authors", [])
+            if isinstance(authors_data, list):
+                authors = ", ".join(
+                    a.get("name", "Bilinmeyen Yazar")
+                    for a in authors_data
+                    if isinstance(a, dict)
                 )
+            elif isinstance(authors_data, str):
+                authors = authors_data
+            else:
+                authors = "Yazar bilgisi yok"
 
-                if url and url != "#":
-                    st.markdown(f"🔗 [Orijinal Makale]({url})")
+            st.markdown(
+                f"**Yazarlar:** {authors or 'Yazar bilgisi yok'}  \n"
+                f"**Yıl:** {paper_year}  \n"
+                f"**Alıntı:** {citation_count}"
+            )
 
-                with st.spinner("Kısa özet hazırlanıyor..."):
-                    try:
-                        short_summary = summarize_paper(
-                            {
-                                "title": title,
-                                "abstract": abstract
-                            },
-                            api_key
-                        )
-                        st.success(f"**Kısa Özet:** {short_summary}")
-                    except Exception as e:
-                        short_summary = ""
-                        st.error(f"⚠️ Özetleme hatası: {str(e)}")
+            if url and url != "#":
+                st.markdown(f"🔗 [Orijinal Makale]({url})")
 
-                combined_text = f"{title} - {short_summary}"
-
+            with st.spinner("Kısa özet hazırlanıyor..."):
                 try:
-                    add_text_to_index(
-                        combined_text,
-                        source_id=title,
-                        api_key=api_key
+                    short_summary = summarize_paper(
+                        {"title": title, "abstract": abstract},
+                        api_key,
                     )
-
-                    add_to_chroma_memory(
-                        id=f"{title}_{idx}",
-                        content=combined_text,
-                        metadata={
-                            "source": "SemanticScholar",
-                            "title": title
-                        }
-                    )
+                    st.success(f"**Kısa Özet:** {short_summary}")
                 except Exception as e:
-                    st.warning(f"⚠️ Hafızaya ekleme sırasında hata: {str(e)}")
+                    short_summary = ""
+                    st.error(f"⚠️ Özetleme hatası: {str(e)}")
 
-                with st.expander("📜 Detaylı Özet (isteğe bağlı açılır)"):
-                    with st.spinner("Detaylı özet hazırlanıyor..."):
-                        detailed_prompt = f"""
+            combined_text = f"{title} - {short_summary}".strip()
+
+            try:
+                add_text_to_index(combined_text, source_id=title, api_key=api_key)
+                add_to_chroma_memory(
+                    id=f"{title}_{idx}",
+                    content=combined_text,
+                    metadata={"source": "SemanticScholar", "title": title},
+                )
+            except Exception as e:
+                st.warning(f"⚠️ Geçici hafızaya ekleme sırasında hata: {str(e)}")
+
+            with st.expander("📜 Detaylı Özet"):
+                detailed_prompt = f"""
 Makale başlığı: {title}
 
 Özeti: {abstract}
@@ -209,41 +230,38 @@ Bu makaleyi aşağıdaki başlıklar altında detaylıca analiz et:
 
 Hepsini sade ve akademik bir dille açıkla (6-10 cümle arası).
 """
-                        try:
-                            response = client.chat.completions.create(
-                                model="gpt-4o",
-                                messages=[
-                                    {"role": "system", "content": SYSTEM_MESSAGE},
-                                    {"role": "user", "content": detailed_prompt}
-                                ]
-                            )
-                            st.info(response.choices[0].message.content.strip())
-                        except Exception as e:
-                            st.error(f"GPT-4o hata: {str(e)}")
-
-                st.markdown("### 🔍 Benzer Makaleler")
-
                 try:
-                    similar = search_similar(combined_text, top_k=3, api_key=api_key)
-
-                    for sim_idx, (chunk, src) in enumerate(similar, 1):
-                        st.markdown(f"**{sim_idx}. ({src})**")
-                        st.write(f"_{chunk[:300]}..._")
+                    response = client.chat.completions.create(
+                        model="gpt-4o",
+                        messages=[
+                            {"role": "system", "content": SYSTEM_MESSAGE},
+                            {"role": "user", "content": detailed_prompt},
+                        ],
+                    )
+                    st.info(response.choices[0].message.content.strip())
                 except Exception as e:
-                    st.warning(f"⚠️ Benzer makale arama hatası: {str(e)}")
+                    st.error(f"GPT-4o hata: {str(e)}")
 
-                st.markdown("### 💡 Yeni Araştırma Konu Önerileri")
+            st.markdown("### 🔍 Benzer Makaleler")
+            try:
+                similar = search_similar(combined_text, top_k=3, api_key=api_key)
+                for sim_idx, (chunk, src) in enumerate(similar, 1):
+                    st.markdown(f"**{sim_idx}. ({src})**")
+                    st.write(f"_{chunk[:300]}..._")
+            except Exception as e:
+                st.warning(f"⚠️ Benzer makale arama hatası: {str(e)}")
 
-                try:
-                    topics = suggest_topics_based_on_text(combined_text, api_key=api_key)
-                    st.success(topics)
-                except Exception as e:
-                    st.warning(f"⚠️ Konu önerisi hatası: {str(e)}")
+            st.markdown("### 💡 Yeni Araştırma Konu Önerileri")
+            try:
+                topics = suggest_topics_based_on_text(combined_text, api_key=api_key)
+                st.success("\n".join(topics) if isinstance(topics, list) else topics)
+            except Exception as e:
+                st.warning(f"⚠️ Konu önerisi hatası: {str(e)}")
 
-                st.markdown("---")
+            st.markdown("---")
 
-# 🔁 Geçmiş Araştırmalarım
-with tab3:
+
+with tab_history:
     st.subheader("🔁 Daha Önce Eklediğiniz Araştırmalar")
     search_term = st.text_input("📅 Geçmişte aradığınız bir konuyu yazın:")
 
@@ -251,18 +269,20 @@ with tab3:
         with st.spinner("Geçmiş taranıyor..."):
             try:
                 results = search_memory(search_term)
-
                 documents = results.get("documents", [[]])[0]
                 metadatas = results.get("metadatas", [[]])[0]
 
-                for i, (doc, meta) in enumerate(zip(documents, metadatas)):
-                    st.markdown(f"**{i + 1}. {meta.get('source', 'Kaynak Yok')}**")
-                    st.info(doc[:500] + "...")
+                if not documents:
+                    st.info("Bu arama için geçmişte kayıt bulunamadı.")
+
+                for i, (doc, meta) in enumerate(zip(documents, metadatas), 1):
+                    st.markdown(f"**{i}. {meta.get('source', 'Kaynak Yok')}**")
+                    st.info((doc or "")[:500] + "...")
             except Exception as e:
                 st.error(f"Geçmiş arama hatası: {str(e)}")
 
-# 🧪 ArXiv Sekmesi
-with tab4:
+
+with tab_arxiv:
     st.subheader("🧪 ArXiv Preprint Arama")
     arxiv_query = st.text_input("🔍 ArXiv'te aramak istediğiniz konu:", "self-supervised learning")
     max_results = st.slider("Kaç makale getirilsin?", 1, 10, 5)
@@ -277,112 +297,92 @@ with tab4:
 
         if not arxiv_papers:
             st.warning("Hiçbir preprint bulunamadı.")
-        else:
-            for i, paper in enumerate(arxiv_papers, 1):
-                st.markdown(f"### {i}. {paper.get('title', 'Başlık yok')}")
-                st.markdown(f"**Yazarlar:** {paper.get('authors', 'Yazar bilgisi yok')}")
-                st.markdown(f"**Yayın Tarihi:** {paper.get('published', 'Tarih yok')}")
-                st.write(f"**Özet:** {paper.get('summary', '')[:500]}...")
 
-                link = paper.get("link", "#")
-                if link and link != "#":
-                    st.markdown(f"[🔗 ArXiv Linki]({link})")
+        for i, paper in enumerate(arxiv_papers, 1):
+            st.markdown(f"### {i}. {paper.get('title', 'Başlık yok')}")
+            st.markdown(f"**Yazarlar:** {paper.get('authors', 'Yazar bilgisi yok')}")
+            st.markdown(f"**Yayın Tarihi:** {paper.get('published', 'Tarih yok')}")
+            st.write(f"**Özet:** {paper.get('summary', '')[:500]}...")
 
-                st.markdown("---")
+            link = paper.get("link", "#")
+            if link and link != "#":
+                st.markdown(f"[🔗 ArXiv Linki]({link})")
 
-# 📖 Makale Q&A Sekmesi
-with tab5:
+            st.markdown("---")
+
+
+with tab_pdf_qa:
     st.subheader("📖 Yüklediğiniz makaleye soru sorun")
-
-    uploaded_file = st.file_uploader("📌 PDF yükleyin", type=["pdf"])
+    uploaded_file = st.file_uploader("📌 PDF yükleyin", type=["pdf"], key="pdf_qa_file")
     question = st.text_input("❓ Bu makaleyle ilgili ne öğrenmek istiyorsunuz?", "")
 
     if uploaded_file and question and st.button("🧠 Soruyu Yanıtla"):
         with st.spinner("PDF okunuyor ve analiz ediliyor..."):
             try:
-                pdf_reader = PdfReader(uploaded_file)
-                full_text = ""
-
-                for page in pdf_reader.pages:
-                    full_text += page.extract_text() or ""
+                full_text = extract_pdf_text(uploaded_file)
 
                 if len(full_text) < 100:
                     st.warning("Bu PDF'den yeterince metin çıkarılamadı.")
                 else:
                     build_index_from_text(full_text)
-
                     with st.spinner("Yanıt oluşturuluyor..."):
                         answer = answer_with_context(question, api_key)
                         st.success("✅ Yanıt:")
                         st.write(answer)
-
             except Exception as e:
                 st.error(f"Hata oluştu: {str(e)}")
 
-# 🧠 Hafızaya Dayalı Soru Sekmesi
-with tab6:
+
+with tab_memory_qa:
     streamlit_memory_qa_tab(api_key)
 
-# 📌 PDF'yi Milvus Hafızasına Ekle Sekmesi
-with tab7:
-    st.subheader("📌 PDF'yi Milvus Hafızasına Ekle")
 
-    user_id = st.text_input("👤 Kullanıcı ID:", value="demo-user")
+with tab_pdf_memory:
+    st.subheader("📌 PDF'yi Milvus Hafızasına Ekle")
+    user_id = st.text_input("👤 Kullanıcı ID:", value="demo-user", key="milvus_user_id")
     uploaded_file = st.file_uploader("📎 PDF yükleyin", type=["pdf"], key="milvus_pdf")
 
     if uploaded_file and user_id and st.button("💾 Hafızaya Kaydet"):
-        with st.spinner("PDF okunuyor ve embedding Milvus'a kaydediliyor..."):
+        with st.spinner("PDF okunuyor ve Milvus'a kaydediliyor..."):
             try:
-                pdf_reader = PdfReader(uploaded_file)
-                full_text = ""
-
-                for page in pdf_reader.pages:
-                    full_text += page.extract_text() or ""
+                full_text = extract_pdf_text(uploaded_file)
 
                 if len(full_text.strip()) < 100:
                     st.warning("Bu PDF'den yeterince metin çıkarılamadı.")
                 else:
-                    words = full_text.split()
-                    chunk_size = 500
-                    base_doc_id = uploaded_file.name.replace(".pdf", "")
-
-                    for i in range(0, len(words), chunk_size):
-                        chunk = " ".join(words[i:i + chunk_size])
-                        chunked_doc_id = f"{base_doc_id}_chunk_{i // chunk_size + 1}"
-
-                        add_to_milvus(
-                            user_id=user_id,
-                            doc_id=chunked_doc_id,
-                            text=chunk,
-                            api_key=api_key
-                        )
-
-                    st.success("✅ PDF içeriği parçalara ayrıldı ve Milvus'a başarıyla eklendi!")
-
+                    base_doc_id = uploaded_file.name.rsplit(".", 1)[0]
+                    saved = add_to_milvus(
+                        user_id=user_id,
+                        doc_id=base_doc_id,
+                        text=full_text,
+                        api_key=api_key,
+                    )
+                    if saved:
+                        st.success("✅ PDF içeriği Milvus hafızasına başarıyla eklendi!")
+                    else:
+                        st.warning("PDF okundu ama kaydedilecek anlamlı metin bulunamadı.")
             except Exception as e:
                 st.error(f"Hata oluştu: {str(e)}")
 
-# 📂 Başlıkları Gör Sekmesi
-with tab8:
-    st.subheader("📚 Kayıtlı Başlıklarınızı Görüntüleyin")
 
-    current_user_id = st.text_input("👤 Kullanıcı ID (başlıkları görmek için):", value="demo-user")
+with tab_titles:
+    st.subheader("📚 Kayıtlı Başlıklarınızı Görüntüleyin")
+    current_user_id = st.text_input(
+        "👤 Kullanıcı ID (başlıkları görmek için):",
+        value="demo-user",
+        key="titles_user_id",
+    )
 
     if st.button("📂 Başlıkları Göster"):
         try:
-            titles = list_titles(
-                user_id=current_user_id,
-                session_user_id=current_user_id
-            )
+            titles = list_titles(user_id=current_user_id, session_user_id=current_user_id)
 
             if titles:
                 st.success(f"✅ {len(titles)} başlık bulundu:")
-
                 for title in titles:
                     st.markdown(f"- 📄 **{title}**")
             else:
                 st.info("🔍 Henüz eklenmiş bir başlık bulunamadı.")
-
         except PermissionError as e:
             st.error(f"🚫 Yetkisiz erişim: {str(e)}")
         except Exception as e:
