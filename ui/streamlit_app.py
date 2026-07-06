@@ -19,6 +19,7 @@ from app.rag_qa_engine import build_index_from_text, answer_with_context
 from app.rag_milvus import streamlit_memory_qa_tab
 from app.milvus_engine import add_to_milvus, list_titles
 from PyPDF2 import PdfReader
+from app.milvus_engine import list_titles, clear_user_memory
 
 # 🔐 API Key
 st.sidebar.markdown("## 🔐 OpenAI API Key")
@@ -387,3 +388,5 @@ with tab8:
             st.error(f"🚫 Yetkisiz erişim: {str(e)}")
         except Exception as e:
             st.error(f"⚠️ Bir hata oluştu: {str(e)}")
+
+
