@@ -6,10 +6,15 @@ AAG_SYSTEM_MESSAGE = "Sen yaratıcı, açıklayıcı ve analoji temelli bir GPT 
 
 # 🮮 RAG + AAG destekli yanıtlayıcı
 def answer_question_with_memory(question: str, user_id: str, api_key: str, mode: str = "RAG", top_k: int = 3) -> str:
-    """Kullanıcı tercihine göre RAG veya AAG yanıt döner."""
     top_chunks = search_milvus(query=question, user_id=user_id, api_key=api_key, top_k=top_k)
-    context = "\n".join([f"- {doc_id}" for doc_id, _, _ in top_chunks])
 
+    context = "\n\n".join([
+        f"Doküman: {doc_id}\nİçerik:\n{chunk}"
+        for doc_id, chunk, _ in top_chunks
+    ])
+
+    if not context.strip():
+        return "Bu kullanıcı için hafızada ilgili içerik bulunamadı."
     if mode == "RAG":
         system_msg = RAG_SYSTEM_MESSAGE
         user_prompt = f"""
