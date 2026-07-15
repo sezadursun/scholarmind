@@ -5,9 +5,9 @@ import textwrap
 from openai import OpenAI
 
 # Embedding ayarları
-DIMENSION = 1536  # text-embedding-ada-002 boyutu
+DIMENSION = 1536  # text-embedding-3-small boyutu
 MAX_CHUNK_SIZE = 1000  # karakter bazlı güvenli limit
-EMBEDDING_MODEL = "text-embedding-ada-002"
+EMBEDDING_MODEL = "text-embedding-3-small"
 
 # FAISS index + metin listesi
 faiss_index = faiss.IndexFlatL2(DIMENSION)
