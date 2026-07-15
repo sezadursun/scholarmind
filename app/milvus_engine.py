@@ -4,8 +4,7 @@ Place this file at: app/milvus_engine.py
 
 Required environment variables / Streamlit secrets:
 - MILVUS_URI
-- MILVUS_USER
-- MILVUS_PASSWORD
+- MILVUS_TOKEN
 
 OpenAI API key is intentionally passed from the UI per request.
 """
