@@ -25,7 +25,7 @@ from app.arxiv import search_arxiv
 from app.chroma import add_to_memory as add_to_chroma_memory, search_memory
 from app.faiss_engine import add_text_to_index, search_similar, suggest_topics_based_on_text
 from app.milvus_engine import add_to_milvus, list_titles
-from app.paper_search import search_papers
+from app.paper_search import PaperSearchError, search_papers
 from app.prompts import SYSTEM_MESSAGE
 from app.rag_milvus import streamlit_memory_qa_tab
 from app.rag_qa_engine import answer_with_context, build_index_from_text
@@ -152,9 +152,30 @@ with tab_search:
     if st.button("Ara ve Özetle"):
         with st.spinner("Makaleler aranıyor..."):
             try:
-                papers = search_papers(query=query, year=year, limit=limit)
+                semantic_scholar_api_key = None
+                try:
+                    semantic_scholar_api_key = st.secrets.get(
+                        "SEMANTIC_SCHOLAR_API_KEY"
+                    )
+                except Exception:
+                    pass
+
+                papers = search_papers(
+                    query=query,
+                    year=year,
+                    limit=limit,
+                    api_key=semantic_scholar_api_key,
+                )
+            except PaperSearchError as e:
+                st.error(f"📱 Semantic Scholar API hatası: {e}")
+                if e.status_code == 429:
+                    st.info(
+                        "Bu hata gerçek bir 'sonuç bulunamadı' durumu değildir. "
+                        "Semantic Scholar ortak istek limiti dolmuş olabilir."
+                    )
+                st.stop()
             except Exception as e:
-                st.error(f"📱 Semantic Scholar API hatası: {str(e)}")
+                st.error(f"📱 Makale arama hatası: {str(e)}")
                 st.stop()
 
         if not papers:
