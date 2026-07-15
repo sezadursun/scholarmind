@@ -70,16 +70,14 @@ def _safe_doc_id(doc_id: str) -> str:
 
 @lru_cache(maxsize=1)
 def connect_milvus() -> bool:
-    """Open a reusable connection to Milvus / Zilliz Cloud."""
+    """Open a reusable token-authenticated connection to Zilliz Cloud."""
     uri = _get_secret("MILVUS_URI")
-    user = _get_secret("MILVUS_USER")
-    password = _get_secret("MILVUS_PASSWORD")
+    token = _get_secret("MILVUS_TOKEN")
 
     connections.connect(
         alias="default",
         uri=uri,
-        user=user,
-        password=password,
+        token=token,
         secure=True,
     )
     return True
