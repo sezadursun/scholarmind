@@ -23,7 +23,12 @@ from PyPDF2 import PdfReader
 from scholarmind_ui_theme import apply_scholarmind_theme
 from app.arxiv import search_arxiv
 from app.chroma import add_to_memory as add_to_chroma_memory, search_memory
-from app.faiss_engine import add_text_to_index, search_similar, suggest_topics_based_on_text
+from app.faiss_engine import (
+    add_text_to_index,
+    reset_index,
+    search_similar,
+    suggest_topics_based_on_text,
+)
 from app.milvus_engine import add_to_milvus, list_titles
 from app.paper_search import PaperSearchError, search_papers
 from app.prompts import SYSTEM_MESSAGE
@@ -183,12 +188,82 @@ with tab_search:
         else:
             st.success(f"{len(papers)} makale bulundu.")
 
+        # First summarize every result. Then build one temporary FAISS index
+        # containing the whole result set. This prevents each paper from being
+        # recommended as its own "similar paper".
+        enriched_papers = []
+
         for idx, paper in enumerate(papers, 1):
             title = paper.get("title", "Başlık yok")
             abstract = paper.get("abstract", "")
+
+            with st.spinner(f"{idx}/{len(papers)} kısa özet hazırlanıyor..."):
+                try:
+                    short_summary = summarize_paper(
+                        {"title": title, "abstract": abstract},
+                        api_key,
+                    )
+                except Exception as e:
+                    short_summary = ""
+                    st.warning(f"⚠️ '{title}' özetlenemedi: {str(e)}")
+
+            enriched = dict(paper)
+            enriched["short_summary"] = short_summary
+            enriched["combined_text"] = (
+                f"{title} - {short_summary or abstract}"
+            ).strip()
+            enriched_papers.append(enriched)
+
+        # FAISS is temporary and search-specific.
+        reset_index()
+        faiss_ready = True
+
+        for paper in enriched_papers:
+            try:
+                add_text_to_index(
+                    paper["combined_text"],
+                    source_id=paper.get("paper_id") or paper["title"],
+                    api_key=api_key,
+                )
+            except Exception as e:
+                faiss_ready = False
+                st.warning(
+                    "⚠️ FAISS geçici indeksine ekleme başarısız oldu: "
+                    f"{paper['title']} — {str(e)}"
+                )
+
+        # Chroma is persistent history. Its failure must not block FAISS or UI.
+        for idx, paper in enumerate(enriched_papers, 1):
+            try:
+                stable_id = (
+                    paper.get("paper_id")
+                    or f"semantic-scholar-{idx}-{abs(hash(paper['title']))}"
+                )
+                add_to_chroma_memory(
+                    id=str(stable_id),
+                    content=paper["combined_text"],
+                    api_key=api_key,
+                    metadata={
+                        "source": "SemanticScholar",
+                        "title": paper["title"],
+                        "paper_id": paper.get("paper_id") or "",
+                    },
+                )
+            except Exception as e:
+                st.warning(
+                    "⚠️ Chroma geçmişine kayıt başarısız oldu: "
+                    f"{paper['title']} — {str(e)}"
+                )
+
+        for idx, paper in enumerate(enriched_papers, 1):
+            title = paper.get("title", "Başlık yok")
+            abstract = paper.get("abstract", "")
+            short_summary = paper.get("short_summary", "")
+            combined_text = paper.get("combined_text", title)
             paper_year = paper.get("year", "Yıl bilgisi yok")
             citation_count = paper.get("citationCount", 0)
             url = paper.get("url", "#")
+            source_id = paper.get("paper_id") or title
 
             st.markdown(f"## {idx}. {title}")
 
@@ -213,28 +288,10 @@ with tab_search:
             if url and url != "#":
                 st.markdown(f"🔗 [Orijinal Makale]({url})")
 
-            with st.spinner("Kısa özet hazırlanıyor..."):
-                try:
-                    short_summary = summarize_paper(
-                        {"title": title, "abstract": abstract},
-                        api_key,
-                    )
-                    st.success(f"**Kısa Özet:** {short_summary}")
-                except Exception as e:
-                    short_summary = ""
-                    st.error(f"⚠️ Özetleme hatası: {str(e)}")
-
-            combined_text = f"{title} - {short_summary}".strip()
-
-            try:
-                add_text_to_index(combined_text, source_id=title, api_key=api_key)
-                add_to_chroma_memory(
-                    id=f"{title}_{idx}",
-                    content=combined_text,
-                    metadata={"source": "SemanticScholar", "title": title},
-                )
-            except Exception as e:
-                st.warning(f"⚠️ Geçici hafızaya ekleme sırasında hata: {str(e)}")
+            if short_summary:
+                st.success(f"**Kısa Özet:** {short_summary}")
+            else:
+                st.info("Bu makale için kısa özet üretilemedi.")
 
             with st.expander("📜 Detaylı Özet"):
                 detailed_prompt = f"""
@@ -264,17 +321,49 @@ Hepsini sade ve akademik bir dille açıkla (6-10 cümle arası).
                     st.error(f"GPT-4o hata: {str(e)}")
 
             st.markdown("### 🔍 Benzer Makaleler")
-            try:
-                similar = search_similar(combined_text, top_k=3, api_key=api_key)
-                for sim_idx, (chunk, src) in enumerate(similar, 1):
-                    st.markdown(f"**{sim_idx}. ({src})**")
-                    st.write(f"_{chunk[:300]}..._")
-            except Exception as e:
-                st.warning(f"⚠️ Benzer makale arama hatası: {str(e)}")
+            if not faiss_ready:
+                st.info("Geçici benzerlik indeksi tam olarak oluşturulamadı.")
+            else:
+                try:
+                    similar = search_similar(
+                        combined_text,
+                        top_k=min(3, max(0, len(enriched_papers) - 1)),
+                        api_key=api_key,
+                        exclude_source_id=source_id,
+                    )
+
+                    if not similar:
+                        st.info(
+                            "Bu sonuç kümesinde mevcut makale dışında "
+                            "benzer bir makale bulunamadı."
+                        )
+
+                    for sim_idx, (chunk, similar_source_id) in enumerate(similar, 1):
+                        similar_paper = next(
+                            (
+                                item
+                                for item in enriched_papers
+                                if (item.get("paper_id") or item["title"])
+                                == similar_source_id
+                            ),
+                            None,
+                        )
+                        similar_title = (
+                            similar_paper["title"]
+                            if similar_paper
+                            else similar_source_id
+                        )
+                        st.markdown(f"**{sim_idx}. {similar_title}**")
+                        st.write(f"_{chunk[:300]}..._")
+                except Exception as e:
+                    st.warning(f"⚠️ Benzer makale arama hatası: {str(e)}")
 
             st.markdown("### 💡 Yeni Araştırma Konu Önerileri")
             try:
-                topics = suggest_topics_based_on_text(combined_text, api_key=api_key)
+                topics = suggest_topics_based_on_text(
+                    combined_text,
+                    api_key=api_key,
+                )
                 st.success("\n".join(topics) if isinstance(topics, list) else topics)
             except Exception as e:
                 st.warning(f"⚠️ Konu önerisi hatası: {str(e)}")
@@ -289,7 +378,7 @@ with tab_history:
     if search_term:
         with st.spinner("Geçmiş taranıyor..."):
             try:
-                results = search_memory(search_term)
+                results = search_memory(search_term, api_key=api_key)
                 documents = results.get("documents", [[]])[0]
                 metadatas = results.get("metadatas", [[]])[0]
 
