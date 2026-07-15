@@ -1,12 +1,29 @@
-streamlit
-openai
-requests
-PyPDF2
-sentence-transformers
-faiss-cpu
-pymilvus
-# chromadb  # optional, only needed if using Chroma
-python-dotenv
+# ScholarMind / Streamlit application
+# Recommended Python version: 3.11
+
+streamlit>=1.40,<2.0
+openai>=1.40,<3.0
+requests>=2.31,<3.0
+python-dotenv>=1.0,<2.0
+
+# PDF and feed processing
+PyPDF2>=3.0,<4.0
+feedparser>=6.0,<7.0
+
+# Data processing
+numpy>=1.24,<2.0
+pandas>=2.0,<3.0
+
+# Embeddings and local vector search
+sentence-transformers>=3.0,<6.0
+faiss-cpu>=1.8,<2.0
+torch>=2.2,<3.0
+torchvision>=0.17,<1.0
+
+# Vector databases
+# Kept on the 2.x client line for compatibility with the existing
+# connections / Collection / utility based PyMilvus code.
+pymilvus>=2.4,<2.6
+
+# Chroma 0.4.22 requires NumPy 1.x; see the NumPy constraint above.
 chromadb==0.4.22
-feedparser
-torchvision
